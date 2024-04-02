@@ -1,6 +1,27 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+/*
+Test List
+A retailer cannot order products from the manufacturer if the product is not created
+A retailer cannot order products from the manufacturer if order quantity is larger than manufacturer's inventory
+A retailer cannot order products from the manufacturer if he/she does not send enough ether
+The manufacturer should receive the money after a retailer successfully orders products
+The manufacturer should have correct inventory of the product after creating the product
+
+A manufacturer cannot make distribution request if there’s no order been made
+A manufacturer cannot distribute products more than inventory
+
+A logistic provider cannot ship products if products are not ready for shipment
+The manufacturer’s inventory of the product should be correct after a logistic provider has shipped the product
+
+A retailer cannot receive products if pruducts are not shipped
+The quantity of received products at the retailer’s should match the ordered quantity
+The retailer’s inventory of the product should be correct after receiving the product
+
+And more....
+*/
+
 describe("SupplyChainManagement", function () {
   let SupplyChainManagement;
   let supplyChainContract;
