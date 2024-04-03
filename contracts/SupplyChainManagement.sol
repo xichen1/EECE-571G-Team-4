@@ -117,6 +117,7 @@ contract SupplyChainManagement is AccessControl {
 
     // Logistic provider functions
     function shipProduct(uint256 productId, uint256 quantity) public onlyLogisticsProvider {
+        Product storage product = products[productId];
         require(keccak256(bytes(products[productId].status)) == keccak256(bytes("ready_for_shipment")), "Product is not ready for shipment");
         products[productId].status = "shipped";
         product.currentOwner = msg.sender; // Transfer ownership to the Logistic provider
