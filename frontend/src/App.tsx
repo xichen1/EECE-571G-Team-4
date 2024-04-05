@@ -1,45 +1,49 @@
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useReadContract, useWriteContract } from 'wagmi';
+import { ConnectKitButton } from 'connectkit';
+import wagmiContractConfig from '@/abi.ts';
+import { Button } from '@components/ui/button.tsx';
+import Manufacturer from '@pages/manufacturer/Manufacturer.tsx';
 
 function App() {
-  const account = useAccount();
-  const { connectors, connect, status, error } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { data: hash, writeContract } = useWriteContract();
 
+  // const { connectors, connect } = useConnect();
+  // const { address, isConnecting, isDisconnected } = useAccount();
+  const { data: abc } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'products',
+    args: [BigInt(1)],
+  });
+  console.log(abc);
+  const submit = async (e: any) => {
+    e.preventDefault();
+    writeContract({
+      ...wagmiContractConfig,
+      functionName: 'createProduct',
+      args: [BigInt(1), 'abc', BigInt(1), BigInt(1)],
+    });
+  };
+
+  // const submitCheck = async (e: any) => {
+  //   e.preventDefault();
+  //   const { data: abc } = useReadContract({
+  //     ...wagmiContractConfig,
+  //     functionName: 'products',
+  //   });
+  //   console.log(abc);
+  // };
   return (
-    <>
-      <div>
-        <h2>Account</h2>
-        <div>
-          status: {account.status}
-          <br />
-          addresses: {JSON.stringify(account.addresses)}
-          <br />
-          chainId: {account.chainId}
-        </div>
-
-        {account.status === 'connected' && (
-          <button type="button" onClick={() => disconnect()}>
-            Disconnect
-          </button>
-        )}
-      </div>
-
-      <div>
-        <h2>Connect</h2>
-        {connectors.map((connector) => (
-          <button
-            key={connector.uid}
-            onClick={() => connect({ connector })}
-            type="button"
-          >
-            {connector.name}
-          </button>
-        ))}
-        <div>{status}</div>
-        <div>{error?.message}</div>
-      </div>
-    </>
+    // <div>
+    //   <Button onClick={submit} />
+    //   {/*<Button onClick={submitCheck}>check</Button>*/}
+    //   {hash && <div>Transaction Hash: {hash}</div>}
+    //   <ConnectKitButton />
+    // </div>
+    <Manufacturer />
   );
+  // if (isConnecting) return <div>Connecting...</div>;
+  // if (isDisconnected) return <div>Disconnected</div>;
+  // return <div>Connected Wallet: {address}</div>;
 }
 
 export default App;
