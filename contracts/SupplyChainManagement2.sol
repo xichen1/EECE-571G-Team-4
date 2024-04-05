@@ -190,6 +190,13 @@ contract SupplyChainManagement is AccessControl {
         
         // Update the inventory after the purchase
         retailerInventory[productId].quantity -= quantity;
+
+        // Update consumer purchase list
+        if (consumerPurchases[msg.sender][productId].quantity > 0) {
+            consumerPurchases[msg.sender][productId].quantity += quantity;
+        } else{
+            consumerPurchases[msg.sender][productId] = Products(productId, retailerInventory[productId].name, retailerInventory[productId].price, quantity, false);
+        }
         
         // Refund any excess payment
         uint256 purchaseExcess = msg.value - totalCost;
