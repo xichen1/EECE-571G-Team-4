@@ -172,16 +172,17 @@ contract SupplyChainManagement is AccessControl {
         emit ProductListedForSale(productId, price, msg.sender);
     }
 
-    /*
-    // Function for customers to verify the authenticity of a product before purchase
-    function verifyProductAuthenticity(uint256 productId) public view returns (bool) {
-        // A product is considered authentic and ready for purchase if its 'buyable' is "true"
-        if ( retailerInventory[productId].buyable == true) {
-            return true;
-        }
-        return false;
+    // Function to verify the authenticity of a product before purchase
+    function verifyProductAuthenticity(uint256 productId) public view returns (bool isAuthentic, bool isAvailableForPurchase, uint256 price) {
+        Products memory product = retailerInventory[productId];
+        // A product is considered authentic if it exists in the retailer's inventory
+        isAuthentic = product.id != 0;
+        // And it's available for purchase if 'buyable' is true
+        isAvailableForPurchase = product.buyable;
+        // Return the price as well for consumer's information
+        price = product.price;
+        return (isAuthentic, isAvailableForPurchase, price);
     }
-    */
 
     // Function for a consumer to purchase a product
     function purchaseProduct(uint256 productId, uint256 quantity) public onlyConsumer payable {
