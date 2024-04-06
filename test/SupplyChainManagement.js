@@ -3,29 +3,28 @@ const { ethers } = require("hardhat");
 
 /*
 Test List
-*A retailer cannot order products from the manufacturer if the product is not available
-*A retailer cannot order products from the manufacturer if order quantity is larger than manufacturer's inventory
-*A retailer cannot order products from the manufacturer if he/she does not send enough ether
-The manufacturer should receive the money after a retailer successfully orders products
-*The manufacturer should have correct inventory of the product after creating the product
+1. A retailer cannot order products from the manufacturer if the product is not available.
+2. A retailer cannot order products from the manufacturer if the order quantity is larger than the manufacturer's inventory.
+3. A retailer cannot order products from the manufacturer if he/she does not send enough ether.
+4. The manufacturer should have the correct inventory of the product after creating the product.
+5. A manufacturer cannot make a distribution request if there’s no order been made.
+6. A manufacturer cannot distribute products more than inventory.
+7. A logistic provider cannot ship products if products are not ready for shipment.
+8. The manufacturer’s inventory of the product should be correct after a logistic provider has shipped the product.
+9. A retailer cannot receive products if products are not shipped.
+10. A retailer’s inventory of the product should be correct after receiving the product.
+11. A retailer cannot list products for sale if the quantity of the product is 0.
+12. A retailer can list products for sale and set the price if everything is correct.
+13. A consumer cannot purchase a product if there's no product listed for sale.
+14. A consumer cannot purchase products more than the inventory of the retailer.
+15. A consumer cannot purchase products from the retailer if he/she does not send enough ether.
+16. A consumer should purchase products from the retailer if everything is correct.
 
-*A manufacturer cannot make distribution request if there’s no order been made
-*A manufacturer cannot distribute products more than inventory
+*TO DO 17. Multiple products test
 
-*A logistic provider cannot ship products if products are not ready for shipment
-*The manufacturer’s inventory of the product should be correct after a logistic provider has shipped the product
+18. Should use getAllManufacturerProducts to return all manufacturer products correctly.
+19. Should correctly return all products in the retailer's inventory.
 
-*A retailer cannot receive products if products are not shipped
-A retailer’s inventory of the product should be correct after receiving the product
-A retailer cannot list products for sale if the quantity of product is 0
-A retailer can list products for sale and set the price if everything is correct
-
-A consumer cannot purchase a product if there's no product listed for sale
-A consumer cannot purchase products more than inventory of the retailer
-A consumer cannot purchase products from the retailer if he/she does not send enough ether
-A consumer should purchase products from the retailer if everything is correct
-
-And more....
 */
 
 describe("SupplyChainManagement", function () {
@@ -196,7 +195,7 @@ describe("SupplyChainManagement", function () {
     const productId = 1;
     const productName = "Product to Ship";
     const productPrice = ethers.parseEther("1");
-    const productQty = 100; // initial quantity
+    const productQty = 100;
   
     // Manufacturer creates a product
     await supplyChainContract.connect(manufacturer).createProduct(productId, productName, productPrice, productQty);
@@ -231,11 +230,305 @@ describe("SupplyChainManagement", function () {
     // Retailer attempts to receive the product before it has been shipped
     await expect(supplyChainContract.connect(retailer).receiveProduct(productId))
       .to.be.revertedWith("Product has not been shipped"); // Assuming the contract reverts with this message
+
+    // Retailer orders a quantity of the product
+    const orderQty = 10n;
+    const orderValue = productPrice * orderQty;
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: orderValue });
+    // Retailer attempts to receive the product before it has been shipped
+    await expect(supplyChainContract.connect(retailer).receiveProduct(productId))
+      .to.be.revertedWith("Product has not been shipped"); // Assuming the contract reverts with this message
   
-    // Optionally, verify the status in the delivery list remains unchanged
     const delivery = await supplyChainContract.deliveryList(productId);
-    expect(delivery.status).to.not.equal("received");
+    expect(delivery.status).to.not.equal("received");    
   });
+
+  it("A retailer’s inventory of the product should be correct after receiving the product", async function () {
+    const productId = 1;
+    const productName = "Product to be Received";
+    const productPrice = ethers.parseEther("1");
+    const productQty = 100;
+    const orderQty = 10n;
+    const orderValue = productPrice * orderQty;
+  
+    // Manufacturer creates a product
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, productPrice, productQty);
+  
+    // Retailer places an order
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: orderValue });
+  
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(productId, orderQty);
+  
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(productId, orderQty);
+  
+    // Retailer receives the product
+    await supplyChainContract.connect(retailer).receiveProduct(productId);
+  
+    // Verify retailer's inventory is updated correctly
+    const retailerProduct = await supplyChainContract.retailerInventory(productId);
+    expect(retailerProduct.quantity).to.equal(Number(orderQty));
+  });
+
+
+  it("A retailer cannot list products for sale if the quantity of the product is 0", async function () {
+    const productId = 1;
+    const productName = "Product Not For Sale";
+    const productPrice = ethers.parseEther("1");
+    const productQty = 100;
+  
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, productPrice, productQty);
+  
+    // Retailer tries to list the product for sale with a quantity of 0
+    await expect(supplyChainContract.connect(retailer).listProductForSale(productId, productPrice))
+      .to.be.revertedWith("No item to list for sale"); // Assuming the contract reverts with this message
+  
+    // Verify the product's buyable state remains false
+    const product = await supplyChainContract.retailerInventory(productId);
+    expect(product.buyable).to.equal(false);
+  });
+
+
+  it("A retailer can list products for sale and set the price if everything is correct", async function () {
+    const productId = 1;
+    const productName = "Product Available for Sale";
+    const productPrice = ethers.parseEther("1");
+    const productQty = 100;
+    const orderQty = 10n;
+    const orderValue = productPrice * orderQty;
+    const salePrice = ethers.parseEther("2");
+  
+    // Manufacturer creates a product
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, productPrice, productQty);
+  
+    // Retailer orders a quantity of the product
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: orderValue });
+  
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(productId, orderQty);
+  
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(productId, orderQty);
+  
+    // Retailer receives the product
+    await supplyChainContract.connect(retailer).receiveProduct(productId);
+  
+    // Retailer lists the product for sale with the new price
+    await supplyChainContract.connect(retailer).listProductForSale(productId, salePrice);
+  
+    // Verify the product is now listed for sale at the correct price
+    const listedProduct = await supplyChainContract.retailerInventory(productId);
+    expect(listedProduct.price.toString()).to.equal(salePrice.toString());
+    expect(listedProduct.buyable).to.equal(true);
+  });
+
+  it("A consumer cannot purchase a product if there's no product listed for sale", async function () {
+    const productId = 1;
+    const productName = "Unlisted Product";
+    const productPrice = ethers.parseEther("1");
+    const productQty = 100;
+    const orderQty = 10n;
+    const purchaseQty = 5n;
+    const orderValue = productPrice * orderQty;
+    const purchaseValue = productPrice * purchaseQty; // Assuming consumer is attempting to buy at manufacturer's price
+  
+    // Manufacturer creates a product
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, productPrice, productQty);
+  
+    // Retailer orders a quantity of the product
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: orderValue });
+  
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(productId, orderQty);
+  
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(productId, orderQty);
+  
+    // Retailer receives the product but does not list it for sale
+    await supplyChainContract.connect(retailer).receiveProduct(productId);
+  
+    // Consumer attempts to purchase the product that has not been listed for sale
+    await expect(supplyChainContract.connect(consumer).purchaseProduct(productId, purchaseQty, { value: purchaseValue }))
+      .to.be.revertedWith("Product is not for sale"); // This message should match the revert message in your smart contract
+  
+    const consumerPurchase = await supplyChainContract.consumerPurchases(consumer.address, productId);
+    expect(consumerPurchase.quantity).to.equal(0);
+  });
+
+
+  it("A consumer cannot purchase products more than the inventory of the retailer", async function () {
+    const productId = 1;
+    const productName = "Limited Stock Product";
+    const productPrice = ethers.parseEther("1");
+    const initialProductQty = 100;
+    const orderQty = 20n;
+    const purchaseQty = 25n; // Quantity the consumer attempts to purchase, intentionally more than available
+    const orderValue = productPrice * orderQty; // Total value for the retailer's order
+    const salePrice = ethers.parseEther("2");
+  
+    // Manufacturer creates a product
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, productPrice, initialProductQty);
+  
+    // Retailer orders a quantity of the product
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: orderValue });
+  
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(productId, orderQty);
+  
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(productId, orderQty);
+  
+    // Retailer receives the product
+    await supplyChainContract.connect(retailer).receiveProduct(productId);
+  
+    // Retailer lists the product for sale
+    await supplyChainContract.connect(retailer).listProductForSale(productId, salePrice);
+  
+    // Consumer attempts to purchase the product with quantity more than the retailer's inventory
+    await expect(supplyChainContract.connect(consumer).purchaseProduct(productId, purchaseQty, { value: salePrice * purchaseQty }))
+      .to.be.revertedWith("Not enough product available for purchase"); // This message should match the revert message in your smart contract
+  
+    const retailerProduct = await supplyChainContract.retailerInventory(productId);
+    expect(retailerProduct.quantity).to.equal(Number(orderQty));
+  });
+
+
+  it("A consumer cannot purchase products from the retailer if he/she does not send enough ether", async function () {
+    const productId = 1;
+    const productName = "Exclusive Product";
+    const productPrice = ethers.parseEther("1");
+    const salePrice = ethers.parseEther("2");
+    const productQty = 100;
+    const orderQty = 20n;
+    const purchaseQty = 5n;
+    const insufficientValue = ethers.parseEther("1"); // Insufficient Ether for the purchase
+  
+    // Manufacturer creates a product
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, productPrice, productQty);
+  
+    // Retailer orders a quantity of the product
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: productPrice * orderQty });
+  
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(productId, orderQty);
+  
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(productId, orderQty);
+  
+    // Retailer receives the product
+    await supplyChainContract.connect(retailer).receiveProduct(productId);
+  
+    // Retailer lists the product for sale at a higher price
+    await supplyChainContract.connect(retailer).listProductForSale(productId, salePrice);
+  
+    // Consumer attempts to purchase the product with insufficient Ether
+    await expect(supplyChainContract.connect(consumer).purchaseProduct(productId, purchaseQty, { value: insufficientValue * purchaseQty}))
+      .to.be.revertedWith("Insufficient payment"); // This message should match the revert message in your smart contract
+  
+    const consumerPurchase = await supplyChainContract.consumerPurchases(consumer.address, productId);
+    expect(consumerPurchase.quantity).to.equal(0);
+  });
+
+
+  it("A consumer should purchase products from the retailer if everything is correct", async function () {
+    const productId = 1;
+    const productName = "Sought After Product";
+    const manufacturerPrice = ethers.parseEther("1");
+    const salePrice = ethers.parseEther("2");
+    const initialProductQty = 100n;
+    const orderQty = 20n;
+    const purchaseQty = 5n;
+    const purchaseValue = salePrice * purchaseQty;
+  
+    // Manufacturer creates a product
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, manufacturerPrice, initialProductQty);
+  
+    // Retailer orders a quantity of the product
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: manufacturerPrice * orderQty });
+  
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(productId, orderQty);
+  
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(productId, orderQty);
+  
+    // Retailer receives the product
+    await supplyChainContract.connect(retailer).receiveProduct(productId);
+  
+    // Retailer lists the product for sale at a higher price
+    await supplyChainContract.connect(retailer).listProductForSale(productId, salePrice);
+  
+    // Consumer purchases the product, sending enough Ether
+    await expect(supplyChainContract.connect(consumer).purchaseProduct(productId, purchaseQty, { value: purchaseValue }))
+      .to.emit(supplyChainContract, 'ProductPurchased') // Check if the 'ProductPurchased' event is emitted
+      .withArgs(productId, purchaseQty, consumer.address);
+  
+    // Verify the consumer's purchase is recorded correctly
+    const consumerPurchase = await supplyChainContract.consumerPurchases(consumer.address, productId);
+    expect(consumerPurchase.quantity).to.equal(purchaseQty);
+  
+    // Verify the retailer's inventory is updated correctly
+    const retailerProduct = await supplyChainContract.retailerInventory(productId);
+    expect(retailerProduct.quantity).to.equal(orderQty - purchaseQty);
+ 
+    // Verify the Manufacturer's inventory is correct
+    const manufacturerProduct = await supplyChainContract.manufacturerInventory(productId);
+    expect(manufacturerProduct.quantity).to.equal(initialProductQty - orderQty);    
+  });
+
+  it("A consumer can verify the product authenticity and availability", async function () {
+    const productId = 1;
+    const productName = "Coke";
+    const manufacturerPrice = ethers.parseEther("1");
+    const salePrice = ethers.parseEther("2");
+    const initialProductQty = 100n;
+    const orderQty = 20n;
+    const purchaseQty = 5n;
+    const purchaseValue = salePrice * purchaseQty;
+  
+    // Manufacturer creates a product
+    await supplyChainContract.connect(manufacturer).createProduct(productId, productName, manufacturerPrice, initialProductQty);
+  
+    // Retailer orders a quantity of the product
+    await supplyChainContract.connect(retailer).orderProduct(productId, orderQty, { value: manufacturerPrice * orderQty });
+  
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(productId, orderQty);
+  
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(productId, orderQty);
+  
+    // Retailer receives the product
+    await supplyChainContract.connect(retailer).receiveProduct(productId);
+  
+
+    // Verify product authenticity and availability before list for sale
+    let [isAuthentic, isAvailableForPurchase, price] = await supplyChainContract.verifyProductAuthenticity(productId);
+    expect(isAuthentic).to.be.true;
+    expect(isAvailableForPurchase).to.be.false;
+    expect(price).to.equal(manufacturerPrice);
+
+    // Retailer lists the product for sale
+    await supplyChainContract.connect(retailer).listProductForSale(productId, salePrice);
+ 
+
+    // Verify product authenticity and availability before purchase
+    [isAuthentic, isAvailableForPurchase, price] = await supplyChainContract.verifyProductAuthenticity(productId);
+    expect(isAuthentic).to.be.true;
+    expect(isAvailableForPurchase).to.be.true;
+    expect(price).to.equal(salePrice);
+
+    // Consumer purchases the product
+    await supplyChainContract.connect(consumer).purchaseProduct(productId, purchaseQty, { value: purchaseValue });
+
+    // Verify the authenticity of a non-existent (fake) product
+    const fakeProductId = 999;
+    [isAuthentic, isAvailableForPurchase] = await supplyChainContract.verifyProductAuthenticity(fakeProductId);
+    expect(isAuthentic).to.be.false;
+    expect(isAvailableForPurchase).to.be.false;
+
+  });  
 
 
   //-------------------------Return functions tests---------------------------------------------
@@ -267,10 +560,63 @@ describe("SupplyChainManagement", function () {
     expect(products[1].quantity).to.equal(200);
   });
 
+  it("Should correctly return all products in the retailer's inventory", async function () {
+    // Assuming setup is done for product creation, ordering by retailer, shipping, and receiving
 
+    // Retailer lists multiple products for sale
+    const product1Name = "Coke";
+    const product2Name = "Water";
+    const product1Id = 1;
+    const product2Id = 2;
+    const manufacturerPrice1 = ethers.parseEther("1");
+    const manufacturerPrice2 = ethers.parseEther("1");
+    const initialProductQty = 100n;
+    const salePrice1 = ethers.parseEther("2"); // Retail price for product 1
+    const salePrice2 = ethers.parseEther("3"); // Retail price for product 2
+    const quantity1 = 20n; // Quantity of product 1 ordered and received by retailer
+    const quantity2 = 15n; // Quantity of product 2 ordered and received by retailer
+
+    await supplyChainContract.connect(manufacturer).createProduct(product1Id, product1Name, manufacturerPrice1, initialProductQty);
+    await supplyChainContract.connect(manufacturer).createProduct(product2Id, product2Name, manufacturerPrice2, initialProductQty);
+
+    // Retailer orders a quantity of the product
+    await supplyChainContract.connect(retailer).orderProduct(product1Id, quantity1, { value: manufacturerPrice1 * quantity1 });
+    await supplyChainContract.connect(retailer).orderProduct(product2Id, quantity2, { value: manufacturerPrice2 * quantity2 });
+
+    // Manufacturer marks the product as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(product1Id, quantity1);
+    await supplyChainContract.connect(manufacturer).requestDistribution(product2Id, quantity2);
+
+    // Logistic provider ships the product
+    await supplyChainContract.connect(logistics).shipProduct(product1Id, quantity1);
+    await supplyChainContract.connect(logistics).shipProduct(product2Id, quantity2);
+
+    // Retailer receives the product
+    await supplyChainContract.connect(retailer).receiveProduct(product1Id);
+    await supplyChainContract.connect(retailer).receiveProduct(product2Id);
+
+    await supplyChainContract.connect(retailer).listProductForSale(product1Id, salePrice1);
+    await supplyChainContract.connect(retailer).listProductForSale(product2Id, salePrice2);
+
+    // Retrieve all products from the retailer's inventory
+    const allProducts = await supplyChainContract.getAllRetailerProducts();
+
+    // Check if the returned array length matches the number of listed products
+    expect(allProducts.length).to.equal(2);
+
+    // Verify details of the first product
+    expect(allProducts[0].id).to.equal(product1Id);
+    expect(allProducts[0].price.toString()).to.equal(salePrice1.toString());
+    expect(allProducts[0].quantity).to.equal(quantity1);
+    expect(allProducts[0].buyable).to.be.true; // Assuming products are marked as buyable when listed
+
+    // Verify details of the second product
+    expect(allProducts[1].id).to.equal(product2Id);
+    expect(allProducts[1].price.toString()).to.equal(salePrice2.toString());
+    expect(allProducts[1].quantity).to.equal(quantity2);
+    expect(allProducts[1].buyable).to.be.true;
+  });
 
   
 
 });
-
-
