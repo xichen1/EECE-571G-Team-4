@@ -8,39 +8,53 @@ contract SupplyChainManagement is AccessControl {
     bytes32 public constant LOGISTICS_ROLE = keccak256("LOGISTICS_ROLE");
     bytes32 public constant RETAILER_ROLE = keccak256("RETAILER_ROLE");
     bytes32 public constant CONSUMER_ROLE = keccak256("CONSUMER_ROLE");
+    
 
-    struct Product {
+    // Assume only one manufacture and one retailer
+    address public manufacturerAddress;
+    address public retailerAddress;
+
+    constructor(address _manufacturer, address _retailer) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        manufacturerAddress = _manufacturer;
+        retailerAddress = _retailer;
+    }
+
+    struct Products {
         uint256 id;
         string name;
         uint256 price;
-        string status; // "created", "ready_for_shipment", "shipped", etc.
-        address currentOwner;
+        uint256 quantity;
+        bool buyable; // true only when retailer lists the product for sale
+    }
+
+    // products shipped by logistics company
+    struct Delivery {
+        uint256 id;
+        string status; // "ordered", "ready_for_shipment", "shipped", "received"
+        uint256 quantity;
     }
 
 
-    uint256 private _nextProductId = 1;
-    mapping(uint256 => Product) public products;
+    uint256[] private ProductIds;
 
-    mapping(uint256 => uint256) public productInventory;
-    mapping(uint256 => uint256) public retailerInventory;
-    mapping(uint256 => uint256) private orderedQuantities;
+    mapping(address => mapping(uint256 => Products)) public consumerPurchases;
+    mapping(uint256 => Products) public manufacturerInventory;
+    mapping(uint256 => Products) public retailerInventory;
+    mapping (uint256 => Delivery) public deliveryList;
 
 
-    event ProductCreated(uint256 productId, string name, uint256 price);
+    event ProductCreated(uint256 productId, string name, uint256 price, uint quantity);
     event DistributionRequested(uint256 productId);
     event ProductShipped(uint256 productId);
     event ShippingStatusUpdated(uint256 productId, string newStatus);
     event ProductOrdered(uint256 productId, address orderedBy);
     event ProductReceived(uint256 productId, address receivedBy);
     event ProductListedForSale(uint256 productId, uint256 price, address listedBy);
-    event ProductPurchased(uint256 productId, address purchasedBy);
+    event ProductPurchased(uint256 productId, uint quantity, address purchasedBy);
 
-    constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MANUFACTURER_ROLE, msg.sender); // Assuming the deployer is also a manufacturer for demo purposes
-        _grantRole(LOGISTICS_ROLE, msg.sender); // Assuming the deployer is also a logistic provider for demo purposes
-    }
 
+    
     // Function to setup roles (call after deployment for setup)
     function setupRole(bytes32 role, address account) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
@@ -69,34 +83,42 @@ contract SupplyChainManagement is AccessControl {
         _;
     }
     
+
     // Function for a manufacturer to create products and set product price
-    function createProduct(uint256 productId, string memory name, uint256 price, uint256 quantity) public onlyManufacturer {
-        //uint256 productId = _nextProductId++;     
-        products[productId] = Product(productId, name, price, "created", msg.sender);
-        if (productInventory[productId] > 0) {
-            productInventory[productId] += quantity;
+    function createProduct(uint256 productId, string memory name, uint256 price, uint256 quantity) public onlyManufacturer {   
+        bool isNewProduct = manufacturerInventory[productId].quantity == 0;
+        
+        // Update the product information
+        if (isNewProduct) {
+            manufacturerInventory[productId] = Products(productId, name, price, quantity, false);
+            // Add the new product ID to the tracking array
+            ProductIds.push(productId);
+        } else {
+            manufacturerInventory[productId].quantity += quantity;
         }
-        else {
-            productInventory[productId] = quantity; // Set initial inventory            
-        }       
-        emit ProductCreated(productId, name, price);
+        
+        emit ProductCreated(productId, name, price, quantity);
     }
+
 
     // Function for a retailer to order a product from the manufacturer and pay for it
     function orderProduct(uint256 productId, uint256 quantity) public payable onlyRetailer {
-        Product storage product = products[productId];
-        
-        require(keccak256(bytes(product.status)) == keccak256(bytes("created")), "Product is not in the 'created' state");
-        require(productInventory[productId] >= quantity, "Insufficient quantity in manufacturer's inventory");
+        Products storage product = manufacturerInventory[productId];
+        require(deliveryList[productId].quantity == 0, "You already have a shipment");
+        require(product.quantity > 0, "Product is out of stock");
+        require(product.quantity >= quantity, "Insufficient quantity in manufacturer's inventory");
         uint256 orderCost = product.price * quantity;
         require(msg.value >= orderCost, "Insufficient payment for the order");
-        
-        product.status = "ordered";
-        orderedQuantities[productId] = quantity; // Track the quantity ordered
+
+        // Track the quantity ordered
+        deliveryList[productId] = Delivery(productId, "ordered", quantity); 
 
         // Transfer payment to the manufacturer
-        address payable manufacturer = payable(product.currentOwner);
+        address payable manufacturer = payable(manufacturerAddress);
         manufacturer.transfer(orderCost);
+
+        // Update the stock
+        //product.quantity -= quantity;
 
         // If the retailer sent more Ether than the cost, refund the excess
         uint256 excessPayment = msg.value - orderCost;
@@ -109,82 +131,80 @@ contract SupplyChainManagement is AccessControl {
 
     // Function for a manufacturer to reqest distribution
     function requestDistribution(uint256 productId, uint256 quantity) public onlyManufacturer {
-        require(keccak256(bytes(products[productId].status)) == keccak256(bytes("ordered")), "No order for the products");
-        require(productInventory[productId] >= quantity, "Insufficient quantity in manufacturer's inventory");
-        products[productId].status = "ready_for_shipment";
+        require(manufacturerInventory[productId].quantity >= quantity, "Insufficient quantity in manufacturer's inventory");
+        require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("ordered")), "No order for the products");
+        deliveryList[productId].status = "ready_for_shipment";
         emit DistributionRequested(productId);
     }
 
     // Logistic provider functions
     function shipProduct(uint256 productId, uint256 quantity) public onlyLogisticsProvider {
-        Product storage product = products[productId];
-        require(keccak256(bytes(products[productId].status)) == keccak256(bytes("ready_for_shipment")), "Product is not ready for shipment");
-        products[productId].status = "shipped";
-        product.currentOwner = msg.sender; // Transfer ownership to the Logistic provider
-        productInventory[productId] -= quantity;
+        Products storage product = manufacturerInventory[productId];
+        require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("ready_for_shipment")), "Product is not ready for shipment");
+        deliveryList[productId].status = "shipped";
+        // Update the manufacturer's stock
+        product.quantity -= quantity;        
         emit ProductShipped(productId);
     }
 
-    function updateShippingStatus(uint256 productId, string memory newStatus) public onlyLogisticsProvider {
-        require(keccak256(bytes(products[productId].status)) == keccak256(bytes("shipped")) ||
-                keccak256(bytes(products[productId].status)) == keccak256(bytes("in_transit")), "Product is not shipped or in transit");
-        products[productId].status = newStatus;
-        emit ShippingStatusUpdated(productId, newStatus);
-    }
-
-
     // Function for a retailer to mark a product as received
-    function receiveProduct(uint256 productId, uint256 quantity) public onlyRetailer {
-        Product storage product = products[productId];
-        require(keccak256(bytes(product.status)) == keccak256(bytes("shipped")), "Product has not been shipped");
-        require(orderedQuantities[productId] == quantity, "Received quantity does not match the ordered quantity");        
-        
-        product.status = "received";
-        product.currentOwner = msg.sender; // Transfer ownership to the retailer
-        retailerInventory[productId] += quantity; // Update retailer inventory
+    function receiveProduct(uint256 productId) public onlyRetailer {
+        require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("shipped")), "Product has not been shipped");   
+        deliveryList[productId].status = "received";
+
+        // Update retailer inventory
+        if (retailerInventory[productId].quantity > 0) {
+            retailerInventory[productId].quantity += deliveryList[productId].quantity;
+        } else{
+            retailerInventory[productId] = Products(productId, manufacturerInventory[productId].name, manufacturerInventory[productId].price, deliveryList[productId].quantity, false);
+        }
         
         // Clear the ordered quantity as the order has been fulfilled
-        orderedQuantities[productId] = 0;
+        deliveryList[productId].quantity = 0;
         emit ProductReceived(productId, msg.sender);
     }
 
     // Function for a retailer to list a product for sale
-    function listProductForSale(uint256 productId, uint256 price, uint256 quantity) public onlyRetailer {
-        Product storage product = products[productId];
-        require(product.currentOwner == msg.sender, "Caller does not own the product");
-        require(keccak256(bytes(product.status)) == keccak256(bytes("received")), "Product is not received");
-        require(retailerInventory[productId] >= quantity, "Insufficient quantity to list for sale");
-        product.price = price;
-        product.status = "for_sale";
+    function listProductForSale(uint256 productId, uint256 price) public onlyRetailer {
+        require(retailerInventory[productId].quantity > 0, "No item to list for sale");
+        retailerInventory[productId].price = price;
+        retailerInventory[productId].buyable = true;
         emit ProductListedForSale(productId, price, msg.sender);
     }
 
-    // Function for customers to verify the authenticity of a product before purchase
-    function verifyProductAuthenticity(uint256 productId) public view returns (bool) {
-        Product memory product = products[productId];
-        // A product is considered authentic and ready for purchase if its status is "for_sale"
-        // and its current owner has the retailer role. 
-        if (keccak256(bytes(product.status)) == keccak256(bytes("for_sale")) &&
-            hasRole(RETAILER_ROLE, product.currentOwner)) {
-            return true;
-        }
-        return false;
+    // Function to verify the authenticity of a product before purchase
+    function verifyProductAuthenticity(uint256 productId) public view returns (bool isAuthentic, bool isAvailableForPurchase, uint256 price) {
+        Products memory product = retailerInventory[productId];
+        // A product is considered authentic if it exists in the retailer's inventory
+        isAuthentic = product.id != 0;
+        // And it's available for purchase if 'buyable' is true
+        isAvailableForPurchase = product.buyable;
+        // Return the price as well for consumer's information
+        price = product.price;
+        return (isAuthentic, isAvailableForPurchase, price);
     }
 
     // Function for a consumer to purchase a product
     function purchaseProduct(uint256 productId, uint256 quantity) public onlyConsumer payable {
-        Product storage product = products[productId];
-        require(keccak256(bytes(product.status)) == keccak256(bytes("for_sale")), "Product is not for sale");
-        require(retailerInventory[productId] >= quantity, "Not enough product available for purchase");
+        Products storage product = retailerInventory[productId];
+        require(product.buyable == true, "Product is not for sale");
+        require(product.quantity >= quantity, "Not enough product available for purchase");
         uint256 totalCost = product.price * quantity;
         require(msg.value >= totalCost, "Insufficient payment");
 
         // Transfer payment to the retailer and refund any excess
-        address payable seller = payable(product.currentOwner);
+        address payable seller = payable(retailerAddress);
         seller.transfer(totalCost);
         
         // Update the inventory after the purchase
-        retailerInventory[productId] -= quantity;
+        retailerInventory[productId].quantity -= quantity;
+
+        // Update consumer purchase list
+        if (consumerPurchases[msg.sender][productId].quantity > 0) {
+            consumerPurchases[msg.sender][productId].quantity += quantity;
+        } else{
+            consumerPurchases[msg.sender][productId] = Products(productId, retailerInventory[productId].name, retailerInventory[productId].price, quantity, false);
+        }
         
         // Refund any excess payment
         uint256 purchaseExcess = msg.value - totalCost;
@@ -192,13 +212,49 @@ contract SupplyChainManagement is AccessControl {
             payable(msg.sender).transfer(purchaseExcess);
         }
 
-        // Update the product status if all inventory has been sold
-        if (retailerInventory[productId] == 0) {
-            product.status = "sold_out";
-        }
-
-        emit ProductPurchased(productId, msg.sender);
+        emit ProductPurchased(productId, quantity, msg.sender);
     }
 
+    // Function to return all products in the manufacturer's inventory
+    function getAllManufacturerProducts() public view returns (Products[] memory) {
+        Products[] memory products = new Products[](ProductIds.length);
+        for (uint i = 0; i < ProductIds.length; i++) {
+            products[i] = manufacturerInventory[ProductIds[i]];
+        }
+        return products;
+    }
+
+    // Function to return all products in the retailer's inventory
+    function getAllRetailerProducts() public view returns (Products[] memory) {
+        Products[] memory products = new Products[](ProductIds.length);
+        for (uint i = 0; i < ProductIds.length; i++) {
+            products[i] = retailerInventory[ProductIds[i]];
+        }
+        return products;
+    }
+
+    // Function to return all deliveries corresponding to the manufacturer's product IDs
+    function getAllDeliveries() public view returns (Delivery[] memory) {
+        Delivery[] memory deliveries = new Delivery[](ProductIds.length);
+        for (uint i = 0; i < ProductIds.length; i++) {
+            deliveries[i] = deliveryList[ProductIds[i]];
+        }
+        return deliveries;
+    }
+
+    // Function to return all purchases made by a specific consumer
+    function getAllConsumerPurchases(address consumer) public view returns (Products[] memory) {
+        Products[] memory purchases = new Products[](ProductIds.length);
+        
+        for (uint i = 0; i < ProductIds.length; i++) {
+            uint256 productId = ProductIds[i];
+            // Attempt to fetch the purchase, if any
+            Products storage product = consumerPurchases[consumer][productId];
+            // If the product has not been purchased, quantity will be zero
+            purchases[i] = product;
+        }
+        
+        return purchases;
+    }
 
 }
