@@ -8,6 +8,7 @@ contract SupplyChainManagement is AccessControl {
     bytes32 public constant LOGISTICS_ROLE = keccak256("LOGISTICS_ROLE");
     bytes32 public constant RETAILER_ROLE = keccak256("RETAILER_ROLE");
     bytes32 public constant CONSUMER_ROLE = keccak256("CONSUMER_ROLE");
+    
 
     // Assume only one manufacture and one retailer
     address public manufacturerAddress;
@@ -34,7 +35,10 @@ contract SupplyChainManagement is AccessControl {
     }
 
 
-    uint256 private _nextProductId = 1;
+    //uint256 private _nextProductId = 1;
+
+    uint256[] private ProductIds;
+
     mapping(address => mapping(uint256 => Products)) public consumerPurchases;
     mapping(uint256 => Products) public manufacturerInventory;
     mapping(uint256 => Products) public retailerInventory;
@@ -88,15 +92,23 @@ contract SupplyChainManagement is AccessControl {
         _;
     }
     
+
     // Function for a manufacturer to create products and set product price
     function createProduct(uint256 productId, string memory name, uint256 price, uint256 quantity) public onlyManufacturer {   
-        if (manufacturerInventory[productId].quantity > 0) {
-            manufacturerInventory[productId].quantity += quantity;
-        } else {
+        bool isNewProduct = manufacturerInventory[productId].quantity == 0;
+        
+        // Update the product information
+        if (isNewProduct) {
             manufacturerInventory[productId] = Products(productId, name, price, quantity, false);
+            // Add the new product ID to the tracking array
+            ProductIds.push(productId);
+        } else {
+            manufacturerInventory[productId].quantity += quantity;
         }
+        
         emit ProductCreated(productId, name, price, quantity);
     }
+
 
     // Function for a retailer to order a product from the manufacturer and pay for it
     function orderProduct(uint256 productId, uint256 quantity) public payable onlyRetailer {
@@ -207,5 +219,46 @@ contract SupplyChainManagement is AccessControl {
         emit ProductPurchased(productId, quantity, msg.sender);
     }
 
+    // Function to return all products in the manufacturer's inventory
+    function getAllManufacturerProducts() public view returns (Products[] memory) {
+        Products[] memory products = new Products[](ProductIds.length);
+        for (uint i = 0; i < ProductIds.length; i++) {
+            products[i] = manufacturerInventory[ProductIds[i]];
+        }
+        return products;
+    }
+
+    // Function to return all products in the retailer's inventory
+    function getAllRetailerProducts() public view returns (Products[] memory) {
+        Products[] memory products = new Products[](ProductIds.length);
+        for (uint i = 0; i < ProductIds.length; i++) {
+            products[i] = retailerInventory[ProductIds[i]];
+        }
+        return products;
+    }
+
+    // Function to return all deliveries corresponding to the manufacturer's product IDs
+    function getAllDeliveries() public view returns (Delivery[] memory) {
+        Delivery[] memory deliveries = new Delivery[](ProductIds.length);
+        for (uint i = 0; i < ProductIds.length; i++) {
+            deliveries[i] = deliveryList[ProductIds[i]];
+        }
+        return deliveries;
+    }
+
+    // Function to return all purchases made by a specific consumer
+    function getAllConsumerPurchases(address consumer) public view returns (Products[] memory) {
+        Products[] memory purchases = new Products[](ProductIds.length);
+        
+        for (uint i = 0; i < ProductIds.length; i++) {
+            uint256 productId = ProductIds[i];
+            // Attempt to fetch the purchase, if any
+            Products storage product = consumerPurchases[consumer][productId];
+            // If the product has not been purchased, quantity will be zero
+            purchases[i] = product;
+        }
+        
+        return purchases;
+    }
 
 }
