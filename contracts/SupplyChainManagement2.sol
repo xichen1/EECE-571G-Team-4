@@ -13,6 +13,7 @@ contract SupplyChainManagement is AccessControl {
     // Assume only one manufacture and one retailer
     address public manufacturerAddress;
     address public retailerAddress;
+
     constructor(address _manufacturer, address _retailer) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         manufacturerAddress = _manufacturer;
@@ -35,8 +36,6 @@ contract SupplyChainManagement is AccessControl {
     }
 
 
-    //uint256 private _nextProductId = 1;
-
     uint256[] private ProductIds;
 
     mapping(address => mapping(uint256 => Products)) public consumerPurchases;
@@ -54,16 +53,8 @@ contract SupplyChainManagement is AccessControl {
     event ProductListedForSale(uint256 productId, uint256 price, address listedBy);
     event ProductPurchased(uint256 productId, uint quantity, address purchasedBy);
 
-    /*
-    constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MANUFACTURER_ROLE, msg.sender); // Assuming the deployer is also a manufacturer for demo purposes
-        _grantRole(LOGISTICS_ROLE, msg.sender); // Assuming the deployer is also a logistic provider for demo purposes
-    }
-    */
-    
-    
 
+    
     // Function to setup roles (call after deployment for setup)
     function setupRole(bytes32 role, address account) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
@@ -127,7 +118,7 @@ contract SupplyChainManagement is AccessControl {
         manufacturer.transfer(orderCost);
 
         // Update the stock
-        product.quantity -= quantity;
+        //product.quantity -= quantity;
 
         // If the retailer sent more Ether than the cost, refund the excess
         uint256 excessPayment = msg.value - orderCost;
@@ -139,16 +130,20 @@ contract SupplyChainManagement is AccessControl {
     }
 
     // Function for a manufacturer to reqest distribution
-    function requestDistribution(uint256 productId) public onlyManufacturer {
+    function requestDistribution(uint256 productId, uint256 quantity) public onlyManufacturer {
+        require(manufacturerInventory[productId].quantity >= quantity, "Insufficient quantity in manufacturer's inventory");
         require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("ordered")), "No order for the products");
         deliveryList[productId].status = "ready_for_shipment";
         emit DistributionRequested(productId);
     }
 
     // Logistic provider functions
-    function shipProduct(uint256 productId) public onlyLogisticsProvider {
+    function shipProduct(uint256 productId, uint256 quantity) public onlyLogisticsProvider {
+        Products storage product = manufacturerInventory[productId];
         require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("ready_for_shipment")), "Product is not ready for shipment");
         deliveryList[productId].status = "shipped";
+        // Update the manufacturer's stock
+        product.quantity -= quantity;        
         emit ProductShipped(productId);
     }
 
