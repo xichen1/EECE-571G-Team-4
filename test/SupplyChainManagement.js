@@ -3,28 +3,27 @@ const { ethers } = require("hardhat");
 
 /*
 Test List
-1. A retailer cannot order products from the manufacturer if the product is not available.
-2. A retailer cannot order products from the manufacturer if the order quantity is larger than the manufacturer's inventory.
-3. A retailer cannot order products from the manufacturer if he/she does not send enough ether.
-4. The manufacturer should have the correct inventory of the product after creating the product.
-5. A manufacturer cannot make a distribution request if there’s no order been made.
-6. A manufacturer cannot distribute products more than inventory.
-7. A logistic provider cannot ship products if products are not ready for shipment.
-8. The manufacturer’s inventory of the product should be correct after a logistic provider has shipped the product.
-9. A retailer cannot receive products if products are not shipped.
-10. A retailer’s inventory of the product should be correct after receiving the product.
-11. A retailer cannot list products for sale if the quantity of the product is 0.
-12. A retailer can list products for sale and set the price if everything is correct.
-13. A consumer cannot purchase a product if there's no product listed for sale.
-14. A consumer cannot purchase products more than the inventory of the retailer.
-15. A consumer cannot purchase products from the retailer if he/she does not send enough ether.
-16. A consumer should purchase products from the retailer if everything is correct.
-
-*TO DO 17. Multiple products test
-
-18. Should use getAllManufacturerProducts to return all manufacturer products correctly.
-19. Should correctly return all products in the retailer's inventory.
-
+1. Should allow a manufacturer to create a product and have correct inventory of the product
+2. A retailer cannot order products from the manufacturer if the product is not available
+3. A retailer cannot order products from the manufacturer if order quantity is larger than manufacturer's inventory
+4. A retailer cannot order products from the manufacturer if he/she does not send enough ether
+5. A retailer can order products from the manufacturer if everything is correct
+6. A manufacturer cannot make a distribution request if there is no order been made
+7. A manufacturer cannot distribute products when the distribution quantity is more than the inventory
+8. A logistic provider cannot ship products if products are not ready for shipment
+9. A manufacturer's inventory should be correct after a logistic provider has shipped the product
+10. A retailer cannot receive products if products are not shipped
+11. A retailer's inventory of the product should be correct after receiving the product
+12. A retailer cannot list products for sale if the quantity of the product is 0
+13. A retailer can list products for sale and set the price if everything is correct
+14. A consumer cannot purchase a product if there's no product listed for sale
+15. A consumer cannot purchase products more than the inventory of the retailer
+16. A consumer cannot purchase products from the retailer if he/she does not send enough ether
+17. A consumer should purchase products from the retailer if everything is correct
+18. A consumer can verify the product authenticity and availability
+19. Should use getAllManufacturerProducts to return all manufacturer products correctly
+20. Should correctly return all products in the retailer's inventory
+21. Should use getAllConsumerPurchases to return all purchases made by a specific consumer correctly
 */
 
 describe("SupplyChainManagement", function () {
@@ -55,7 +54,7 @@ describe("SupplyChainManagement", function () {
     await supplyChainContract.grantRole(CONSUMER_ROLE, consumer.address);
   });
 
-  it("Should allow a manufacturer to create a product and have correct inventory of the product", async function () {
+  it("1. Should allow a manufacturer to create a product and have correct inventory of the product", async function () {
 
     const productId = 1;
     const productName = "Test Product";
@@ -75,14 +74,14 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A retailer cannot order products from the manufacturer if the product is not available", async function () {
+  it("2. A retailer cannot order products from the manufacturer if the product is not available", async function () {
 
     // Retailer tries to order a product
     await expect(supplyChainContract.connect(retailer).orderProduct(1, 10))
     .to.be.revertedWith("Product is out of stock");
   });
 
-  it("A retailer cannot order products from the manufacturer if order quantity is larger than manufacturer's inventory", async function () {
+  it("3. A retailer cannot order products from the manufacturer if order quantity is larger than manufacturer's inventory", async function () {
 
     // manufacturer creates a product
     await supplyChainContract.connect(manufacturer).createProduct(1, "Test Product", ethers.parseEther("1"), 100);
@@ -92,7 +91,7 @@ describe("SupplyChainManagement", function () {
     .to.be.revertedWith("Insufficient quantity in manufacturer's inventory");
   });
 
-  it("A retailer cannot order products from the manufacturer if he/she does not send enough ether", async function () {
+  it("4. A retailer cannot order products from the manufacturer if he/she does not send enough ether", async function () {
 
     // manufacturer creates a product
     await supplyChainContract.connect(manufacturer).createProduct(1, "Test Product", ethers.parseEther("1"), 100);
@@ -103,7 +102,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A retailer can order products from the manufacturer if everything is correct", async function () {
+  it("5. A retailer can order products from the manufacturer if everything is correct", async function () {
     // Manufacturer creates a product
     const productId = 1;
     const productName = "Coke";
@@ -131,7 +130,7 @@ describe("SupplyChainManagement", function () {
     //expect(updatedProduct.quantity).to.equal(productQty - orderQty); // Quantity should be reduced by the ordered amount
   });
 
-  it("A manufacturer cannot make a distribution request if there’s no order been made", async function () {
+  it("6. A manufacturer cannot make a distribution request if there is no order been made", async function () {
     const productId = 1;
     const productName = "Product for Retail";
     const productPrice = ethers.parseEther("1"); // Price per unit in Wei
@@ -146,7 +145,7 @@ describe("SupplyChainManagement", function () {
     
   });
 
-  it("A manufacturer cannot distribute products when the distribution quantity is more than the inventory", async function () {
+  it("7. A manufacturer cannot distribute products when the distribution quantity is more than the inventory", async function () {
     const productId = 1;
     const productName = "Product for Retail";
     const productPrice = ethers.parseEther("1"); // Price per unit in Wei
@@ -167,7 +166,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A logistic provider cannot ship products if products are not ready for shipment", async function () {
+  it("8. A logistic provider cannot ship products if products are not ready for shipment", async function () {
     const productId = 1;
     const productName = "Product for Shipping";
     const productPrice = ethers.parseEther("1");
@@ -191,7 +190,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A manufacturer's inventory should be correct after a logistic provider has shipped the product", async function () {
+  it("9. A manufacturer's inventory should be correct after a logistic provider has shipped the product", async function () {
     const productId = 1;
     const productName = "Product to Ship";
     const productPrice = ethers.parseEther("1");
@@ -218,7 +217,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A retailer cannot receive products if products are not shipped", async function () {
+  it("10. A retailer cannot receive products if products are not shipped", async function () {
     const productId = 1;
     const productName = "Product for Receipt";
     const productPrice = ethers.parseEther("1");
@@ -243,7 +242,7 @@ describe("SupplyChainManagement", function () {
     expect(delivery.status).to.not.equal("received");    
   });
 
-  it("A retailer’s inventory of the product should be correct after receiving the product", async function () {
+  it("11. A retailer's inventory of the product should be correct after receiving the product", async function () {
     const productId = 1;
     const productName = "Product to be Received";
     const productPrice = ethers.parseEther("1");
@@ -272,7 +271,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A retailer cannot list products for sale if the quantity of the product is 0", async function () {
+  it("12. A retailer cannot list products for sale if the quantity of the product is 0", async function () {
     const productId = 1;
     const productName = "Product Not For Sale";
     const productPrice = ethers.parseEther("1");
@@ -290,7 +289,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A retailer can list products for sale and set the price if everything is correct", async function () {
+  it("13. A retailer can list products for sale and set the price if everything is correct", async function () {
     const productId = 1;
     const productName = "Product Available for Sale";
     const productPrice = ethers.parseEther("1");
@@ -323,7 +322,7 @@ describe("SupplyChainManagement", function () {
     expect(listedProduct.buyable).to.equal(true);
   });
 
-  it("A consumer cannot purchase a product if there's no product listed for sale", async function () {
+  it("14. A consumer cannot purchase a product if there's no product listed for sale", async function () {
     const productId = 1;
     const productName = "Unlisted Product";
     const productPrice = ethers.parseEther("1");
@@ -357,7 +356,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A consumer cannot purchase products more than the inventory of the retailer", async function () {
+  it("15. A consumer cannot purchase products more than the inventory of the retailer", async function () {
     const productId = 1;
     const productName = "Limited Stock Product";
     const productPrice = ethers.parseEther("1");
@@ -394,7 +393,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A consumer cannot purchase products from the retailer if he/she does not send enough ether", async function () {
+  it("16. A consumer cannot purchase products from the retailer if he/she does not send enough ether", async function () {
     const productId = 1;
     const productName = "Exclusive Product";
     const productPrice = ethers.parseEther("1");
@@ -431,7 +430,7 @@ describe("SupplyChainManagement", function () {
   });
 
 
-  it("A consumer should purchase products from the retailer if everything is correct", async function () {
+  it("17. A consumer should purchase products from the retailer if everything is correct", async function () {
     const productId = 1;
     const productName = "Sought After Product";
     const manufacturerPrice = ethers.parseEther("1");
@@ -477,7 +476,7 @@ describe("SupplyChainManagement", function () {
     expect(manufacturerProduct.quantity).to.equal(initialProductQty - orderQty);    
   });
 
-  it("A consumer can verify the product authenticity and availability", async function () {
+  it("18. A consumer can verify the product authenticity and availability", async function () {
     const productId = 1;
     const productName = "Coke";
     const manufacturerPrice = ethers.parseEther("1");
@@ -527,13 +526,12 @@ describe("SupplyChainManagement", function () {
     [isAuthentic, isAvailableForPurchase] = await supplyChainContract.verifyProductAuthenticity(fakeProductId);
     expect(isAuthentic).to.be.false;
     expect(isAvailableForPurchase).to.be.false;
-
   });  
 
 
   //-------------------------Return functions tests---------------------------------------------
 
-  it("Should use getAllManufacturerProducts to return all manufacturer products correctly", async function () {
+  it("19. Should use getAllManufacturerProducts to return all manufacturer products correctly", async function () {
     // Assuming the createProduct function requires these parameters
     let tx = await supplyChainContract.connect(manufacturer).createProduct(1, "Product 1", ethers.parseEther("0.01"), 100);
     await tx.wait(); // Wait for the transaction to be mined
@@ -560,7 +558,7 @@ describe("SupplyChainManagement", function () {
     expect(products[1].quantity).to.equal(200);
   });
 
-  it("Should correctly return all products in the retailer's inventory", async function () {
+  it("20. Should correctly return all products in the retailer's inventory", async function () {
     // Assuming setup is done for product creation, ordering by retailer, shipping, and receiving
 
     // Retailer lists multiple products for sale
@@ -615,6 +613,64 @@ describe("SupplyChainManagement", function () {
     expect(allProducts[1].price.toString()).to.equal(salePrice2.toString());
     expect(allProducts[1].quantity).to.equal(quantity2);
     expect(allProducts[1].buyable).to.be.true;
+  });
+
+  it("21. Should use getAllConsumerPurchases to return all purchases made by a specific consumer correctly", async function () {
+    const product1Id = 1;
+    const product2Id = 2;
+    const product1Name = "Coke";
+    const product2Name = "Sprite";
+    const manufacturerPrice1 = ethers.parseEther("1");
+    const manufacturerPrice2 = ethers.parseEther("1");
+    const initialProductQty = 100n;
+    const salePrice1 = ethers.parseEther("2"); // Retail price for product 1
+    const salePrice2 = ethers.parseEther("3"); // Retail price for product 2
+    const quantity1 = 20n; // Quantity of product 1 ordered and received by retailer
+    const quantity2 = 15n; // Quantity of product 2 ordered and received by retailer
+    const purchaseQty1 = 5n; // Quantity of product 1 purchased by consumer
+    const purchaseQty2 = 10n; // Quantity of product 2 purchased by consumer
+    const purchaseValue1 = salePrice1 * purchaseQty1; // Total value for product 1 purchase
+    const purchaseValue2 = salePrice2 * purchaseQty2; // Total value for product 2 purchase
+
+    // Manufacturer creates multiple products
+    await supplyChainContract.connect(manufacturer).createProduct(product1Id, product1Name, manufacturerPrice1, initialProductQty);
+    await supplyChainContract.connect(manufacturer).createProduct(product2Id, product2Name, manufacturerPrice2, initialProductQty);
+
+    // Retailer orders a quantity of the products
+    await supplyChainContract.connect(retailer).orderProduct(product1Id, quantity1, { value: manufacturerPrice1 * quantity1 });
+    await supplyChainContract.connect(retailer).orderProduct(product2Id, quantity2, { value: manufacturerPrice2 * quantity2 });
+
+    // Manufacturer marks the products as ready for shipment
+    await supplyChainContract.connect(manufacturer).requestDistribution(product1Id, quantity1);
+    await supplyChainContract.connect(manufacturer).requestDistribution(product2Id, quantity2);
+
+    // Logistic provider ships the products
+    await supplyChainContract.connect(logistics).shipProduct(product1Id, quantity1);
+    await supplyChainContract.connect(logistics).shipProduct(product2Id, quantity2);
+
+    // Retailer receives the products
+    await supplyChainContract.connect(retailer).receiveProduct(product1Id);
+    await supplyChainContract.connect(retailer).receiveProduct(product2Id);
+
+    // Retailer lists the products for sale
+    await supplyChainContract.connect(retailer).listProductForSale(product1Id, salePrice1);
+    await supplyChainContract.connect(retailer).listProductForSale(product2Id, salePrice2);
+
+    // Consumer purchases the products
+    await supplyChainContract.connect(consumer).purchaseProduct(product1Id, purchaseQty1, { value: purchaseValue1 });
+    await supplyChainContract.connect(consumer).purchaseProduct(product2Id, purchaseQty2, { value: purchaseValue2 });
+
+    // Verify the consumer's purchase history
+    const purchaseList = await supplyChainContract.getAllConsumerPurchases(consumer);
+    expect(purchaseList.length).to.equal(2);
+    expect(purchaseList[0].id).to.equal(product1Id);
+    expect(purchaseList[0].name).to.equal(product1Name);
+    expect(purchaseList[0].price).to.equal(salePrice1);
+    expect(purchaseList[0].quantity).to.equal(purchaseQty1);
+    expect(purchaseList[1].id).to.equal(product2Id);
+    expect(purchaseList[1].name).to.equal(product2Name);
+    expect(purchaseList[1].price).to.equal(salePrice2);
+    expect(purchaseList[1].quantity).to.equal(purchaseQty2);
   });
 
   
