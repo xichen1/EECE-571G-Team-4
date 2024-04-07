@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/ppx/Desktop/EECE-571G-Team-4/contracts/SupplyChainManagement.sol": {
-      "lastModificationDate": 1712461021731,
-      "contentHash": "4fb621e2fc7c45e879123ac20e02cda7",
+      "lastModificationDate": 1712482304363,
+      "contentHash": "6a9caff72d28b23ab313532c0ec4eb5a",
       "sourceName": "contracts/SupplyChainManagement.sol",
       "solcConfig": {
         "version": "0.8.24",

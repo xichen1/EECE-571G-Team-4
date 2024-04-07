@@ -8,18 +8,19 @@ contract SupplyChainManagement is AccessControl {
     bytes32 public constant LOGISTICS_ROLE = keccak256("LOGISTICS_ROLE");
     bytes32 public constant RETAILER_ROLE = keccak256("RETAILER_ROLE");
     bytes32 public constant CONSUMER_ROLE = keccak256("CONSUMER_ROLE");
-    
 
     // Assume only one manufacture and one retailer
     address public manufacturerAddress;
     address public retailerAddress;
 
-    constructor(address _manufacturer, address _retailer) {
+    constructor(address _manufacturer, address _logistic, address _retailer, address _consumer) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         manufacturerAddress = _manufacturer;
         retailerAddress = _retailer;
         _grantRole(MANUFACTURER_ROLE, manufacturerAddress);
         _grantRole(RETAILER_ROLE, retailerAddress);
+        _grantRole(LOGISTICS_ROLE, _logistic);
+        _grantRole(CONSUMER_ROLE, _consumer);
     }
 
     struct Products {
@@ -43,7 +44,7 @@ contract SupplyChainManagement is AccessControl {
     mapping(address => mapping(uint256 => Products)) public consumerPurchases;
     mapping(uint256 => Products) public manufacturerInventory;
     mapping(uint256 => Products) public retailerInventory;
-    mapping (uint256 => Delivery) public deliveryList;
+    mapping(uint256 => Delivery) public deliveryList;
 
 
     event ProductCreated(uint256 productId, string name, uint256 price, uint quantity);
@@ -55,14 +56,11 @@ contract SupplyChainManagement is AccessControl {
     event ProductListedForSale(uint256 productId, uint256 price, address listedBy);
     event ProductPurchased(uint256 productId, uint quantity, address purchasedBy);
 
-
-    
     // Function to setup roles (call after deployment for setup)
     function setupRole(bytes32 role, address account) public {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
         _grantRole(role, account);
     }
-
 
     // Modifier to check if the caller has the manufacturer role
     modifier onlyManufacturer() {
@@ -84,12 +82,11 @@ contract SupplyChainManagement is AccessControl {
         require(hasRole(CONSUMER_ROLE, msg.sender), "Caller is not a consumer");
         _;
     }
-    
 
     // Function for a manufacturer to create products and set product price
-    function createProduct(uint256 productId, string memory name, uint256 price, uint256 quantity) public onlyManufacturer {   
+    function createProduct(uint256 productId, string memory name, uint256 price, uint256 quantity) public onlyManufacturer {
         bool isNewProduct = manufacturerInventory[productId].quantity == 0;
-        
+
         // Update the product information
         if (isNewProduct) {
             manufacturerInventory[productId] = Products(productId, name, price, quantity, false);
@@ -98,10 +95,9 @@ contract SupplyChainManagement is AccessControl {
         } else {
             manufacturerInventory[productId].quantity += quantity;
         }
-        
+
         emit ProductCreated(productId, name, price, quantity);
     }
-
 
     // Function for a retailer to order a product from the manufacturer and pay for it
     function orderProduct(uint256 productId, uint256 quantity) public payable onlyRetailer {
@@ -113,7 +109,7 @@ contract SupplyChainManagement is AccessControl {
         require(msg.value >= orderCost, "Insufficient payment for the order");
 
         // Track the quantity ordered
-        deliveryList[productId] = Delivery(productId, "ordered", quantity); 
+        deliveryList[productId] = Delivery(productId, "ordered", quantity);
 
         // Transfer payment to the manufacturer
         address payable manufacturer = payable(manufacturerAddress);
@@ -127,7 +123,7 @@ contract SupplyChainManagement is AccessControl {
         if (excessPayment > 0) {
             payable(msg.sender).transfer(excessPayment);
         }
-        
+
         emit ProductOrdered(productId, msg.sender);
     }
 
@@ -145,22 +141,22 @@ contract SupplyChainManagement is AccessControl {
         require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("ready_for_shipment")), "Product is not ready for shipment");
         deliveryList[productId].status = "shipped";
         // Update the manufacturer's stock
-        product.quantity -= quantity;        
+        manufacturerInventory[productId].quantity -= quantity;
         emit ProductShipped(productId);
     }
 
     // Function for a retailer to mark a product as received
     function receiveProduct(uint256 productId) public onlyRetailer {
-        require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("shipped")), "Product has not been shipped");   
+        require(keccak256(bytes(deliveryList[productId].status)) == keccak256(bytes("shipped")), "Product has not been shipped");
         deliveryList[productId].status = "received";
 
         // Update retailer inventory
         if (retailerInventory[productId].quantity > 0) {
             retailerInventory[productId].quantity += deliveryList[productId].quantity;
-        } else{
+        } else {
             retailerInventory[productId] = Products(productId, manufacturerInventory[productId].name, manufacturerInventory[productId].price, deliveryList[productId].quantity, false);
         }
-        
+
         // Clear the ordered quantity as the order has been fulfilled
         deliveryList[productId].quantity = 0;
         emit ProductReceived(productId, msg.sender);
@@ -197,17 +193,17 @@ contract SupplyChainManagement is AccessControl {
         // Transfer payment to the retailer and refund any excess
         address payable seller = payable(retailerAddress);
         seller.transfer(totalCost);
-        
+
         // Update the inventory after the purchase
         retailerInventory[productId].quantity -= quantity;
 
         // Update consumer purchase list
         if (consumerPurchases[msg.sender][productId].quantity > 0) {
             consumerPurchases[msg.sender][productId].quantity += quantity;
-        } else{
+        } else {
             consumerPurchases[msg.sender][productId] = Products(productId, retailerInventory[productId].name, retailerInventory[productId].price, quantity, false);
         }
-        
+
         // Refund any excess payment
         uint256 purchaseExcess = msg.value - totalCost;
         if (purchaseExcess > 0) {
@@ -244,15 +240,6 @@ contract SupplyChainManagement is AccessControl {
         return deliveries;
     }
 
-    // Function to return all deliveries corresponding to the manufacturer's product IDs
-    function getAllDeliveries() public view returns (Delivery[] memory) {
-        Delivery[] memory deliveries = new Delivery[](ProductIds.length);
-        for (uint i = 0; i < ProductIds.length; i++) {
-            deliveries[i] = deliveryList[ProductIds[i]];
-        }
-        return deliveries;
-    }
-
     // Function to return all purchases made by a specific consumer
     function getAllConsumerPurchases(address consumer) public view returns (Products[] memory) {
         uint256 purchaseCount = 0;
@@ -271,7 +258,7 @@ contract SupplyChainManagement is AccessControl {
                 index++;
             }
         }
-        
+
         return purchases;
     }
 

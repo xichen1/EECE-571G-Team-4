@@ -63,6 +63,8 @@ const Manufacturer = () => {
     args: [],
   });
 
+  console.log(products);
+
   const { data: deliveries } = useReadContract({
     ...wagmiContractConfig,
     functionName: 'getAllDeliveries',
@@ -297,9 +299,6 @@ const Manufacturer = () => {
                         <TableHead className="hidden md:table-cell">
                           In Stock Quantity
                         </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
-                        </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
                         </TableHead>
@@ -314,11 +313,7 @@ const Manufacturer = () => {
                           </TableCell>
                           <TableCell>{`$${Number(product.price)}`}</TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {Number(product.quantity) -
-                              Number(deliveries[idx].quantity)}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {product.buyable.toString()}
+                            {Number(product.quantity)}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -370,9 +365,6 @@ const Manufacturer = () => {
                         <TableHead className="hidden md:table-cell">
                           Ordered Quantity
                         </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
-                        </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
                         </TableHead>
@@ -390,9 +382,6 @@ const Manufacturer = () => {
                               <TableCell>{`$${Number(product.price)}`}</TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {Number(deliveries[idx].quantity)}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {product.buyable.toString()}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -454,9 +443,6 @@ const Manufacturer = () => {
                         <TableHead className="hidden md:table-cell">
                           Ordered Quantity
                         </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
-                        </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
                         </TableHead>
@@ -474,9 +460,6 @@ const Manufacturer = () => {
                               <TableCell>{`$${Number(product.price)}`}</TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {Number(deliveries[idx].quantity)}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {product.buyable.toString()}
                               </TableCell>
                             </TableRow>
                           ),

@@ -41,7 +41,6 @@ import {
   DialogTitle,
 } from '@components/ui/dialog.tsx';
 import { Label } from '@components/ui/label.tsx';
-import { parseEther } from 'viem';
 
 const Logistic = () => {
   const { writeContract } = useWriteContract();
@@ -62,16 +61,23 @@ const Logistic = () => {
     args: [],
   });
 
+  const { data: retailerStock } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllRetailerProducts',
+    args: [],
+  });
+
+  console.log('retailerStock', retailerStock);
+
   const handleShipQuantityChange = (e: any) => {
     setShipQuantity(e.target.value);
   };
 
   const handleShip = async () => {
-    console.log(shipID);
     writeContract({
       ...wagmiContractConfig,
       functionName: 'shipProduct',
-      args: [BigInt(Number(shipQuantity)), BigInt(Number(shipQuantity))],
+      args: [BigInt(Number(shipID)), BigInt(Number(shipQuantity))],
     });
     setShipDialogOpen(false);
   };
@@ -82,14 +88,14 @@ const Logistic = () => {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <Header role="logistic" />
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-          <Tabs defaultValue="all">
+          <Tabs defaultValue="ready_for_shipment">
             <div className="flex items-center">
               <TabsList>
                 <TabsTrigger value="ready_for_shipment">
                   Ready For Shipment
                 </TabsTrigger>
-                <TabsTrigger value="ready_for_ship">Ready for Ship</TabsTrigger>
-                <TabsTrigger value="in_transition">In Transition</TabsTrigger>
+                <TabsTrigger value="shipped">Shipped</TabsTrigger>
+                <TabsTrigger value="received">Received</TabsTrigger>
               </TabsList>
               <div className="ml-auto flex items-center gap-2">
                 <div className="relative ml-auto flex-1 md:grow-0">
@@ -134,7 +140,7 @@ const Logistic = () => {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleShip}>Confirm Order</Button>
+                    <Button onClick={handleShip}>Confirm Ship</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -155,7 +161,7 @@ const Logistic = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Ordered Quantity
+                          Shipment Quantity
                         </TableHead>
                         <TableHead className="hidden md:table-cell">
                           Buyable
@@ -213,6 +219,109 @@ const Logistic = () => {
                             </TableRow>
                           ),
                       )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter>
+                  <div className="text-xs text-muted-foreground"></div>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="shipped">
+              <Card>
+                <CardHeader>
+                  <CardTitle>List Products</CardTitle>
+                  <CardDescription>
+                    Order, receive, and list your products for sale here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Shipment Quantity
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Buyable
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products?.map(
+                        (product: any, idx: number) =>
+                          deliveries[idx].status === 'shipped' && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(deliveries[idx].quantity)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {product.buyable.toString()}
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter>
+                  <div className="text-xs text-muted-foreground"></div>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="received">
+              <Card>
+                <CardHeader>
+                  <CardTitle>List Products</CardTitle>
+                  <CardDescription>
+                    Order, receive, and list your products for sale here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Shipment Quantity
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Buyable
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {retailerStock?.map((product: any, idx: number) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{Number(product.id)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{product.name}</Badge>
+                          </TableCell>
+                          <TableCell>{`$${Number(product.price)}`}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {Number(retailerStock[idx].quantity)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {product.buyable.toString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>

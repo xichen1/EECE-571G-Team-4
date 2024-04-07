@@ -50,18 +50,46 @@ const Retailer = () => {
   const [productID, setProductID] = useState<number>();
   const [quantity, setQuantity] = useState<number>();
   const [price, setPrice] = useState<number>();
+
+  const [receiveProductID, setReceiveProductID] = useState<number>();
+  const [receiveProductDialogOpen, setReceiveProductDialogOpen] =
+    useState(false);
+
+  const [listProductID, setListProductID] = useState<number>();
+  const [listProductDialogOpen, setListProductDialogOpen] = useState(false);
+  const [listProductPrice, setListProductPrice] = useState<number>();
+
   const { data: products } = useReadContract({
     ...wagmiContractConfig,
     functionName: 'getAllManufacturerProducts',
     args: [],
   });
 
+  console.log(products);
+
   const { data: deliveries } = useReadContract({
     ...wagmiContractConfig,
     functionName: 'getAllDeliveries',
     args: [],
   });
-  console.log(deliveries);
+
+  const { data: retailerStock } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllRetailerProducts',
+    args: [],
+  });
+
+  console.log(retailerStock);
+
+  const receiveProduct = async (e: any) => {
+    e.preventDefault();
+    writeContract({
+      ...wagmiContractConfig,
+      functionName: 'receiveProduct',
+      args: [BigInt(Number(receiveProductID))],
+    });
+    setReceiveProductDialogOpen(false);
+  };
 
   const orderProduct = async (e: any) => {
     console.log('order');
@@ -75,6 +103,18 @@ const Retailer = () => {
       value: parseEther(`${total}`),
     });
     setDialogOpen(false);
+  };
+
+  const listProduct = async (e: any) => {
+    console.log('list');
+    e.preventDefault();
+    if (!listProductPrice) return;
+    writeContract({
+      ...wagmiContractConfig,
+      functionName: 'listProductForSale',
+      args: [BigInt(Number(listProductID)), BigInt(Number(listProductPrice))],
+    });
+    setListProductDialogOpen(false);
   };
 
   const handleQuantityChange = (e: any) => {
@@ -92,8 +132,8 @@ const Retailer = () => {
               <TabsList>
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="ordered">Ordered</TabsTrigger>
-                <TabsTrigger value="ready_for_ship">Shipped</TabsTrigger>
-                <TabsTrigger value="in_transition">For Sale</TabsTrigger>
+                <TabsTrigger value="shipped">Shipped</TabsTrigger>
+                <TabsTrigger value="received">Received</TabsTrigger>
               </TabsList>
               <div className="ml-auto mr-4 flex items-center gap-2">
                 <div className="relative ml-auto flex-1 md:grow-0">
@@ -142,6 +182,77 @@ const Retailer = () => {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              <Dialog
+                open={receiveProductDialogOpen}
+                onOpenChange={setReceiveProductDialogOpen}
+              >
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Order Product</DialogTitle>
+                    <DialogDescription>
+                      Order products from manufacturers to sell in your store.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right">
+                        Product ID
+                      </Label>
+                      <Input
+                        id="product_id"
+                        value={receiveProductID}
+                        className="col-span-3"
+                        disabled={true}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={receiveProduct}>Confirm Receive</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Dialog
+                open={listProductDialogOpen}
+                onOpenChange={setListProductDialogOpen}
+              >
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>List Product for Sale</DialogTitle>
+                    <DialogDescription>
+                      Order products from manufacturers to sell in your store.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right">
+                        Product ID
+                      </Label>
+                      <Input
+                        id="product_id"
+                        value={listProductID}
+                        className="col-span-3"
+                        disabled={true}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="price" className="text-right">
+                        Price
+                      </Label>
+                      <Input
+                        id="price"
+                        value={listProductPrice}
+                        className="col-span-3"
+                        onChange={(e) =>
+                          setListProductPrice(Number(e.target.value))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={listProduct}>Confirm List</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
             <TabsContent value="all">
               <Card>
@@ -161,9 +272,6 @@ const Retailer = () => {
                         <TableHead className="hidden md:table-cell">
                           In Stock Quantity
                         </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
-                        </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
                         </TableHead>
@@ -178,11 +286,7 @@ const Retailer = () => {
                           </TableCell>
                           <TableCell>{`$${Number(product.price)}`}</TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {Number(product.quantity) -
-                              Number(deliveries[idx].quantity)}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {product.buyable.toString()}
+                            {Number(product.quantity)}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -242,9 +346,6 @@ const Retailer = () => {
                         <TableHead className="hidden md:table-cell">
                           Ordered Quantity
                         </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
-                        </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
                         </TableHead>
@@ -262,9 +363,6 @@ const Retailer = () => {
                               <TableCell>{`$${Number(product.price)}`}</TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {Number(deliveries[idx].quantity)}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {product.buyable.toString()}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -300,6 +398,153 @@ const Retailer = () => {
                             </TableRow>
                           ),
                       )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter></CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="shipped">
+              <Card>
+                <CardHeader>
+                  <CardTitle>List Products</CardTitle>
+                  <CardDescription>
+                    Order, receive, and list your products for sale here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Ordered Quantity
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products?.map(
+                        (product: any, idx: number) =>
+                          deliveries[idx].status === 'shipped' && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(deliveries[idx].quantity)}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setReceiveProductID(Number(product.id));
+                                        setReceiveProductDialogOpen(true);
+                                      }}
+                                    >
+                                      Receive
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter></CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="received">
+              <Card>
+                <CardHeader>
+                  <CardTitle>List Products</CardTitle>
+                  <CardDescription>
+                    Order, receive, and list your products for sale here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Ordered Quantity
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Buyable
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {retailerStock?.map((product: any, idx: number) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{Number(product.id)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{product.name}</Badge>
+                          </TableCell>
+                          <TableCell>{`$${Number(product.price)}`}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {Number(retailerStock[idx].quantity)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {product.buyable.toString()}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  aria-haspopup="true"
+                                  size="icon"
+                                  variant="ghost"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Toggle menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setListProductID(Number(product.id));
+                                    setListProductDialogOpen(true);
+                                  }}
+                                >
+                                  List For Sale
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>
