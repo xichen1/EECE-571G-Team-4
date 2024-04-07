@@ -18,6 +18,8 @@ contract SupplyChainManagement is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         manufacturerAddress = _manufacturer;
         retailerAddress = _retailer;
+        _grantRole(MANUFACTURER_ROLE, manufacturerAddress);
+        _grantRole(RETAILER_ROLE, retailerAddress);
     }
 
     struct Products {
