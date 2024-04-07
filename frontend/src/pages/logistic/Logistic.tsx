@@ -1,7 +1,6 @@
 import { MoreHorizontal, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -10,13 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -29,8 +21,61 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Aside from '@pages/layout/Aside.tsx';
 import Header from '@pages/layout/Header.tsx';
+import { useReadContract, useWriteContract } from 'wagmi';
+import wagmiContractConfig from '@/abi.ts';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu.tsx';
+import { Button } from '@components/ui/button.tsx';
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@components/ui/dialog.tsx';
+import { Label } from '@components/ui/label.tsx';
+import { parseEther } from 'viem';
 
 const Logistic = () => {
+  const { writeContract } = useWriteContract();
+
+  const [shipDialogOpen, setShipDialogOpen] = useState(false);
+  const [shipID, setShipID] = useState<number>(0);
+  const [shipQuantity, setShipQuantity] = useState<number>(0);
+
+  const { data: products } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllManufacturerProducts',
+    args: [],
+  });
+
+  const { data: deliveries } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllDeliveries',
+    args: [],
+  });
+
+  const handleShipQuantityChange = (e: any) => {
+    setShipQuantity(e.target.value);
+  };
+
+  const handleShip = async () => {
+    console.log(shipID);
+    writeContract({
+      ...wagmiContractConfig,
+      functionName: 'shipProduct',
+      args: [BigInt(Number(shipQuantity)), BigInt(Number(shipQuantity))],
+    });
+    setShipDialogOpen(false);
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Aside role="logistic" />
@@ -40,7 +85,9 @@ const Logistic = () => {
           <Tabs defaultValue="all">
             <div className="flex items-center">
               <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="ready_for_shipment">
+                  Ready For Shipment
+                </TabsTrigger>
                 <TabsTrigger value="ready_for_ship">Ready for Ship</TabsTrigger>
                 <TabsTrigger value="in_transition">In Transition</TabsTrigger>
               </TabsList>
@@ -54,27 +101,64 @@ const Logistic = () => {
                   />
                 </div>
               </div>
+              <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Order Product</DialogTitle>
+                    <DialogDescription>
+                      Order products from manufacturers to sell in your store.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right">
+                        Product ID
+                      </Label>
+                      <Input
+                        id="product_id"
+                        value={shipID}
+                        className="col-span-3"
+                        disabled={true}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="quantity" className="text-right">
+                        Quantity
+                      </Label>
+                      <Input
+                        id="quantity"
+                        value={shipQuantity}
+                        className="col-span-3"
+                        onChange={handleShipQuantityChange}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleShip}>Confirm Order</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
-            <TabsContent value="all">
+            <TabsContent value="ready_for_shipment">
               <Card>
                 <CardHeader>
-                  <CardTitle>Ship Products</CardTitle>
+                  <CardTitle>List Products</CardTitle>
                   <CardDescription>
-                    Ship and update shipping information for products here.
+                    Order, receive, and list your products for sale here.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Total Sales
+                          Ordered Quantity
                         </TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Created at
+                          Buyable
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -82,218 +166,58 @@ const Logistic = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Laser Lemonade Machine
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Draft</Badge>
-                        </TableCell>
-                        <TableCell>$499.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          25
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-07-12 10:42 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Hypernova Headphones
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$129.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          100
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-10-18 03:21 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          AeroGlow Desk Lamp
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$39.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          50
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-11-29 08:15 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          TechTonic Energy Drink
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">Draft</Badge>
-                        </TableCell>
-                        <TableCell>$2.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          0
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-12-25 11:59 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Gamer Gear Pro Controller
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$59.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          75
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2024-01-01 12:00 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Luminous VR Headset
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$199.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          30
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2024-02-14 02:14 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                      {products?.map(
+                        (product: any, idx: number) =>
+                          deliveries[idx].status === 'ready_for_shipment' && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(deliveries[idx].quantity)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {product.buyable.toString()}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setShipID(Number(product.id));
+                                        setShipDialogOpen(true);
+                                      }}
+                                    >
+                                      Ship
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
                 <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{' '}
-                    products
-                  </div>
+                  <div className="text-xs text-muted-foreground"></div>
                 </CardFooter>
               </Card>
             </TabsContent>

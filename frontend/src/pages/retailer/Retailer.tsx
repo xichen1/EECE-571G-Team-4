@@ -1,4 +1,4 @@
-import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
+import { MoreHorizontal, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,11 +36,51 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@components/ui/label.tsx';
+import { useReadContract, useWriteContract } from 'wagmi';
+import wagmiContractConfig from '@/abi.ts';
+import { useState } from 'react';
+import { parseEther } from 'viem';
 
 const Retailer = () => {
+  const { writeContract } = useWriteContract();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [productID, setProductID] = useState<number>();
+  const [quantity, setQuantity] = useState<number>();
+  const [price, setPrice] = useState<number>();
+  const { data: products } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllManufacturerProducts',
+    args: [],
+  });
+
+  const { data: deliveries } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllDeliveries',
+    args: [],
+  });
+  console.log(deliveries);
+
+  const orderProduct = async (e: any) => {
+    console.log('order');
+    e.preventDefault();
+    if (!price || !quantity) return;
+    const total = price * quantity;
+    writeContract({
+      ...wagmiContractConfig,
+      functionName: 'orderProduct',
+      args: [BigInt(Number(productID)), BigInt(Number(quantity))],
+      value: parseEther(`${total}`),
+    });
+    setDialogOpen(false);
+  };
+
+  const handleQuantityChange = (e: any) => {
+    setQuantity(e.target.value);
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Aside role="retailer" />
@@ -51,8 +91,8 @@ const Retailer = () => {
             <div className="flex items-center">
               <TabsList>
                 <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="ordered">Ordered</TabsTrigger>
                 <TabsTrigger value="ready_for_ship">Shipped</TabsTrigger>
-                <TabsTrigger value="in_transition">Received</TabsTrigger>
                 <TabsTrigger value="in_transition">For Sale</TabsTrigger>
               </TabsList>
               <div className="ml-auto mr-4 flex items-center gap-2">
@@ -65,15 +105,7 @@ const Retailer = () => {
                   />
                 </div>
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="h-7 gap-1">
-                    <PlusCircle className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                      Order Product
-                    </span>
-                  </Button>
-                </DialogTrigger>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>Order Product</DialogTitle>
@@ -84,23 +116,29 @@ const Retailer = () => {
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="name" className="text-right">
-                        Product Name
+                        Product ID
                       </Label>
                       <Input
-                        id="name"
-                        value="Pedro Duarte"
+                        id="product_id"
+                        value={productID}
                         className="col-span-3"
+                        disabled={true}
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="username" className="text-right">
                         Quantity
                       </Label>
-                      <Input id="username" value="1" className="col-span-3" />
+                      <Input
+                        id="username"
+                        value={quantity}
+                        className="col-span-3"
+                        onChange={handleQuantityChange}
+                      />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit">Confirm Order</Button>
+                    <Button onClick={orderProduct}>Confirm Order</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -117,14 +155,14 @@ const Retailer = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Total Sales
+                          In Stock Quantity
                         </TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Created at
+                          Buyable
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -132,219 +170,140 @@ const Retailer = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Laser Lemonade Machine
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Draft</Badge>
-                        </TableCell>
-                        <TableCell>$499.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          25
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-07-12 10:42 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Hypernova Headphones
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$129.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          100
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-10-18 03:21 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          AeroGlow Desk Lamp
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$39.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          50
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-11-29 08:15 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          TechTonic Energy Drink
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">Draft</Badge>
-                        </TableCell>
-                        <TableCell>$2.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          0
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-12-25 11:59 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Gamer Gear Pro Controller
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$59.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          75
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2024-01-01 12:00 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Luminous VR Headset
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$199.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          30
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2024-02-14 02:14 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                      {products?.map((product: any, idx: number) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{Number(product.id)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{product.name}</Badge>
+                          </TableCell>
+                          <TableCell>{`$${Number(product.price)}`}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {Number(product.quantity) -
+                              Number(deliveries[idx].quantity)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {product.buyable.toString()}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  aria-haspopup="true"
+                                  size="icon"
+                                  variant="ghost"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Toggle menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setProductID(Number(product.id));
+                                    setPrice(Number(product.price));
+                                    setDialogOpen(true);
+                                  }}
+                                >
+                                  Order
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>
                 <CardFooter>
                   <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{' '}
-                    products
+                    Showing <strong>{products ? products.length : 0}</strong>{' '}
+                    Products
                   </div>
                 </CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="ordered">
+              <Card>
+                <CardHeader>
+                  <CardTitle>List Products</CardTitle>
+                  <CardDescription>
+                    Order, receive, and list your products for sale here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Ordered Quantity
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Buyable
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products?.map(
+                        (product: any, idx: number) =>
+                          deliveries[idx].status === 'ordered' && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(deliveries[idx].quantity)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {product.buyable.toString()}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setProductID(Number(product.id));
+                                        setPrice(Number(product.price));
+                                        setDialogOpen(true);
+                                      }}
+                                    >
+                                      Order
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>Delete</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter></CardFooter>
               </Card>
             </TabsContent>
           </Tabs>

@@ -27,12 +27,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import Aside from '@pages/layout/Aside.tsx';
+import Header from '@pages/layout/Header.tsx';
 
 export default function Dashboard() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Aside role="dashboard" />
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+        <Header role="dashboard" />
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
           <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
             <Card className="sm:col-span-2">

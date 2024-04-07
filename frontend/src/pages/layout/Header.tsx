@@ -18,6 +18,7 @@ import {
   BreadcrumbSeparator,
 } from '@components/ui/breadcrumb.tsx';
 import { Role } from '@lib/types/roles.ts';
+import { ConnectKitButton } from 'connectkit';
 
 interface HeaderProps {
   role: Role;
@@ -100,27 +101,32 @@ const Header = ({ role }: HeaderProps) => {
           </nav>
         </SheetContent>
       </Sheet>
-      <Breadcrumb className="hidden md:flex">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/">Dashboard</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          {role !== 'dashboard' && (
-            <>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to={`/${role}`}>
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </>
-          )}
-        </BreadcrumbList>
-      </Breadcrumb>
+      <div className="w-full flex justify-between">
+        <Breadcrumb className="hidden md:flex">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/">Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {role !== 'dashboard' && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to={`/${role}`}>
+                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </>
+            )}
+          </BreadcrumbList>
+        </Breadcrumb>
+        <div>
+          <ConnectKitButton />
+        </div>
+      </div>
     </header>
   );
 };

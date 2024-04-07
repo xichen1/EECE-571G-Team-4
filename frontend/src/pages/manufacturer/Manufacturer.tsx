@@ -41,8 +41,86 @@ import {
   DialogTrigger,
 } from '@components/ui/dialog.tsx';
 import { Label } from '@components/ui/label.tsx';
+import { useReadContract, useWriteContract } from 'wagmi';
+import { useState } from 'react';
+import wagmiContractConfig from '@/abi.ts';
 
 const Manufacturer = () => {
+  const { writeContract } = useWriteContract();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [productID, setProductID] = useState<number>();
+  const [name, setName] = useState<string>('');
+  const [price, setPrice] = useState<number>();
+  const [quantity, setQuantity] = useState<number>();
+
+  const [distributionID, setDistributionID] = useState<number>();
+  const [distributionQuantity, setDistributionQuantity] = useState<number>();
+  const [distributionDialogOpen, setDistributionDialogOpen] = useState(false);
+
+  const { data: products } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllManufacturerProducts',
+    args: [],
+  });
+
+  const { data: deliveries } = useReadContract({
+    ...wagmiContractConfig,
+    functionName: 'getAllDeliveries',
+    args: [],
+  });
+
+  console.log(products);
+
+  const createProduct = async (e: any) => {
+    console.log('createProduct');
+    e.preventDefault();
+    writeContract({
+      ...wagmiContractConfig,
+      functionName: 'createProduct',
+      args: [
+        BigInt(Number(productID)),
+        name,
+        BigInt(Number(price)),
+        BigInt(Number(quantity)),
+      ],
+    });
+    setDialogOpen(false);
+  };
+
+  const requestDistribution = async (e: any) => {
+    console.log('requestDistribution');
+    e.preventDefault();
+    writeContract({
+      ...wagmiContractConfig,
+      functionName: 'requestDistribution',
+      args: [
+        BigInt(Number(distributionID)),
+        BigInt(Number(distributionQuantity)),
+      ],
+    });
+    setDistributionDialogOpen(false);
+  };
+
+  const handleProductIDChange = (e: any) => {
+    setProductID(e.target.value);
+  };
+
+  const handleNameChange = (e: any) => {
+    setName(e.target.value);
+  };
+
+  const handlePriceChange = (e: any) => {
+    setPrice(e.target.value);
+  };
+
+  const handleQuantityChange = (e: any) => {
+    setQuantity(e.target.value);
+  };
+
+  const handleDistributionQuantityChange = (e: any) => {
+    setDistributionQuantity(e.target.value);
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Aside role="manufacturer" />
@@ -53,8 +131,10 @@ const Manufacturer = () => {
             <div className="flex items-center">
               <TabsList>
                 <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="active">Created</TabsTrigger>
-                <TabsTrigger value="draft">Distributed</TabsTrigger>
+                <TabsTrigger value="ordered">Ordered</TabsTrigger>
+                <TabsTrigger value="ready_for_shipment">
+                  Ready For Shipment
+                </TabsTrigger>
               </TabsList>
               <div className="ml-auto flex items-center gap-2">
                 <div className="relative ml-auto flex-1 md:grow-0">
@@ -86,7 +166,7 @@ const Manufacturer = () => {
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Dialog>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="h-7 gap-1">
                       <PlusCircle className="h-3.5 w-3.5" />
@@ -109,21 +189,32 @@ const Manufacturer = () => {
                         </Label>
                         <Input
                           id="productId"
-                          value="1"
+                          value={productID}
                           className="col-span-3"
+                          onChange={handleProductIDChange}
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right">
                           Name
                         </Label>
-                        <Input id="name" value="Book" className="col-span-3" />
+                        <Input
+                          id="name"
+                          value={name}
+                          className="col-span-3"
+                          onChange={handleNameChange}
+                        />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="price" className="text-right">
                           Price
                         </Label>
-                        <Input id="price" value="1.2" className="col-span-3" />
+                        <Input
+                          id="price"
+                          value={price}
+                          className="col-span-3"
+                          onChange={handlePriceChange}
+                        />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="quantity" className="text-right">
@@ -131,13 +222,58 @@ const Manufacturer = () => {
                         </Label>
                         <Input
                           id="quantity"
-                          value="50"
+                          value={quantity}
                           className="col-span-3"
+                          onChange={handleQuantityChange}
                         />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit">Confirm Create</Button>
+                      <Button type="submit" onClick={createProduct}>
+                        Confirm Create
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Dialog
+                  open={distributionDialogOpen}
+                  onOpenChange={setDistributionDialogOpen}
+                >
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Request Distribution</DialogTitle>
+                      <DialogDescription>
+                        Request distribution of products from manufacturers.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="productId" className="text-right">
+                          ProductID
+                        </Label>
+                        <Input
+                          id="productId"
+                          value={distributionID}
+                          disabled={true}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="quantity" className="text-right">
+                          Quantity
+                        </Label>
+                        <Input
+                          id="quantity"
+                          value={distributionQuantity}
+                          className="col-span-3"
+                          onChange={handleDistributionQuantityChange}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" onClick={requestDistribution}>
+                        Confirm Request
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -155,14 +291,14 @@ const Manufacturer = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Total Sales
+                          In Stock Quantity
                         </TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Created at
+                          Buyable
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -170,218 +306,186 @@ const Manufacturer = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Laser Lemonade Machine
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Draft</Badge>
-                        </TableCell>
-                        <TableCell>$499.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          25
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-07-12 10:42 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Hypernova Headphones
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$129.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          100
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-10-18 03:21 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          AeroGlow Desk Lamp
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$39.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          50
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-11-29 08:15 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          TechTonic Energy Drink
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">Draft</Badge>
-                        </TableCell>
-                        <TableCell>$2.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          0
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-12-25 11:59 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Gamer Gear Pro Controller
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$59.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          75
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2024-01-01 12:00 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Luminous VR Headset
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Active</Badge>
-                        </TableCell>
-                        <TableCell>$199.99</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          30
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2024-02-14 02:14 PM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                      {products?.map((product: any, idx: number) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{Number(product.id)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{product.name}</Badge>
+                          </TableCell>
+                          <TableCell>{`$${Number(product.price)}`}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {Number(product.quantity) -
+                              Number(deliveries[idx].quantity)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {product.buyable.toString()}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  aria-haspopup="true"
+                                  size="icon"
+                                  variant="ghost"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Toggle menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>
                 <CardFooter>
                   <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{' '}
-                    products
+                    Showing <strong>{products ? products.length : 0}</strong>{' '}
+                    Products
                   </div>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="ordered">
+              <Card>
+                <CardHeader>
+                  <CardTitle>List Products</CardTitle>
+                  <CardDescription>
+                    Order, receive, and list your products for sale here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Ordered Quantity
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Buyable
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products?.map(
+                        (product: any, idx: number) =>
+                          deliveries[idx].status === 'ordered' && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(deliveries[idx].quantity)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {product.buyable.toString()}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setDistributionID(Number(product.id));
+                                        setPrice(Number(product.price));
+                                        setDistributionDialogOpen(true);
+                                      }}
+                                    >
+                                      Request Distribution
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>Delete</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter>
+                  <div className="text-xs text-muted-foreground"></div>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="ready_for_shipment">
+              <Card>
+                <CardHeader>
+                  <CardTitle>List Products</CardTitle>
+                  <CardDescription>
+                    Order, receive, and list your products for sale here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Ordered Quantity
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Buyable
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products?.map(
+                        (product: any, idx: number) =>
+                          deliveries[idx].status === 'ready_for_shipment' && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(deliveries[idx].quantity)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {product.buyable.toString()}
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter>
+                  <div className="text-xs text-muted-foreground"></div>
                 </CardFooter>
               </Card>
             </TabsContent>
