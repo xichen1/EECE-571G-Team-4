@@ -244,16 +244,32 @@ contract SupplyChainManagement is AccessControl {
         return deliveries;
     }
 
+    // Function to return all deliveries corresponding to the manufacturer's product IDs
+    function getAllDeliveries() public view returns (Delivery[] memory) {
+        Delivery[] memory deliveries = new Delivery[](ProductIds.length);
+        for (uint i = 0; i < ProductIds.length; i++) {
+            deliveries[i] = deliveryList[ProductIds[i]];
+        }
+        return deliveries;
+    }
+
     // Function to return all purchases made by a specific consumer
     function getAllConsumerPurchases(address consumer) public view returns (Products[] memory) {
-        Products[] memory purchases = new Products[](ProductIds.length);
-        
+        uint256 purchaseCount = 0;
         for (uint i = 0; i < ProductIds.length; i++) {
-            uint256 productId = ProductIds[i];
-            // Attempt to fetch the purchase, if any
+            if (consumerPurchases[consumer][ProductIds[i]].quantity > 0) {
+                purchaseCount++;
+            }
+        }
+        Products[] memory purchases = new Products[](purchaseCount);
+        uint256 index = 0;
+        for (uint j = 0; j < ProductIds.length; j++) {
+            uint256 productId = ProductIds[j];
             Products storage product = consumerPurchases[consumer][productId];
-            // If the product has not been purchased, quantity will be zero
-            purchases[i] = product;
+            if (product.quantity > 0) {
+                purchases[index] = product;
+                index++;
+            }
         }
         
         return purchases;
