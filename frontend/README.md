@@ -24,7 +24,7 @@ pnpm install
 2. Start the development server
 
 ```bash
-pnpm dev
+pnpm run dev
 ```
 
 3. Run local Hardhat node
