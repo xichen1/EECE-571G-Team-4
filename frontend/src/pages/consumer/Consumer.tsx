@@ -175,67 +175,74 @@ const Consumer = () => {
                         <TableHead className="hidden md:table-cell">
                           In Stock Quantity
                         </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Buyable
+                        </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
                         </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {retailerStock?.map((product: any) => (
-                        <TableRow key={product.id}>
-                          <TableCell>{Number(product.id)}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{product.name}</Badge>
-                          </TableCell>
-                          <TableCell>{`$${Number(product.price)}`}</TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {Number(product.quantity)}
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  aria-haspopup="true"
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Toggle menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setProductID(Number(product.id));
-                                    setPrice(Number(product.price));
-                                    setDialogOpen(true);
-                                  }}
-                                >
-                                  Purchase
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {retailerStock?.map(
+                        (product: any) =>
+                          Number(product.quantity) !== 0 && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(product.quantity)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {product.buyable.toString()}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setProductID(Number(product.id));
+                                        setPrice(Number(product.price));
+                                        setDialogOpen(true);
+                                      }}
+                                    >
+                                      Purchase
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
-                <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>{products ? products.length : 0}</strong>{' '}
-                    Products
-                  </div>
-                </CardFooter>
               </Card>
             </TabsContent>
             <TabsContent value="purchases">
               <Card>
                 <CardHeader>
-                  <CardTitle>Purchase Products</CardTitle>
+                  <CardTitle>Owned Products</CardTitle>
                   <CardDescription>
-                    Purchase products from retailer.
+                    Products you have purchased from the retailer.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -246,7 +253,7 @@ const Consumer = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Purchased Quantity
+                          Owned Quantity
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>

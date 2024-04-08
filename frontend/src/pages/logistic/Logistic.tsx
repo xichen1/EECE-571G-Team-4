@@ -148,9 +148,9 @@ const Logistic = () => {
             <TabsContent value="ready_for_shipment">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Ship Products</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    Ship ready products to retailers.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -162,9 +162,6 @@ const Logistic = () => {
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
                           Shipment Quantity
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -183,9 +180,6 @@ const Logistic = () => {
                               <TableCell>{`$${Number(product.price)}`}</TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {Number(deliveries[idx].quantity)}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {product.buyable.toString()}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -230,9 +224,9 @@ const Logistic = () => {
             <TabsContent value="shipped">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Shipped Products</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    Track shipped products to retailers.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -244,9 +238,6 @@ const Logistic = () => {
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
                           Shipment Quantity
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -266,9 +257,6 @@ const Logistic = () => {
                               <TableCell className="hidden md:table-cell">
                                 {Number(deliveries[idx].quantity)}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {product.buyable.toString()}
-                              </TableCell>
                             </TableRow>
                           ),
                       )}
@@ -283,9 +271,9 @@ const Logistic = () => {
             <TabsContent value="received">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Received Products</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    Track received products by retailers.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -297,9 +285,6 @@ const Logistic = () => {
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
                           Shipment Quantity
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Buyable
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -316,9 +301,6 @@ const Logistic = () => {
                           <TableCell>{`$${Number(product.price)}`}</TableCell>
                           <TableCell className="hidden md:table-cell">
                             {Number(retailerStock[idx].quantity)}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {product.buyable.toString()}
                           </TableCell>
                         </TableRow>
                       ))}

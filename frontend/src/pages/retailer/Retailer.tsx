@@ -257,9 +257,9 @@ const Retailer = () => {
             <TabsContent value="all">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Order Products</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    Order products from manufacturers to sell in your store.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -311,7 +311,6 @@ const Retailer = () => {
                                 >
                                   Order
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>Delete</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -320,20 +319,15 @@ const Retailer = () => {
                     </TableBody>
                   </Table>
                 </CardContent>
-                <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>{products ? products.length : 0}</strong>{' '}
-                    Products
-                  </div>
-                </CardFooter>
               </Card>
             </TabsContent>
             <TabsContent value="ordered">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Orders</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    The products you have ordered from manufacturers but not
+                    shipped yet.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -391,7 +385,6 @@ const Retailer = () => {
                                     >
                                       Order
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>Delete</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
@@ -407,9 +400,10 @@ const Retailer = () => {
             <TabsContent value="shipped">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Shipped Products</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    The products you have ordered from manufacturers and
+                    shipped.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -481,9 +475,9 @@ const Retailer = () => {
             <TabsContent value="received">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Received Products</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    List products for sale in your store.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -505,46 +499,53 @@ const Retailer = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {retailerStock?.map((product: any, idx: number) => (
-                        <TableRow key={product.id}>
-                          <TableCell>{Number(product.id)}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{product.name}</Badge>
-                          </TableCell>
-                          <TableCell>{`$${Number(product.price)}`}</TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {Number(retailerStock[idx].quantity)}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {product.buyable.toString()}
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  aria-haspopup="true"
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Toggle menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setListProductID(Number(product.id));
-                                    setListProductDialogOpen(true);
-                                  }}
-                                >
-                                  List For Sale
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {retailerStock?.map(
+                        (product: any) =>
+                          Number(product.quantity) !== 0 && (
+                            <TableRow key={product.id}>
+                              <TableCell>{Number(product.id)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{product.name}</Badge>
+                              </TableCell>
+                              <TableCell>{`$${Number(product.price)}`}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {Number(product.quantity)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {product.buyable.toString()}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setListProductID(Number(product.id));
+                                        setListProductDialogOpen(true);
+                                      }}
+                                    >
+                                      List For Sale
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>

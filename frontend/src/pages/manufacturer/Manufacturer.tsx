@@ -132,7 +132,7 @@ const Manufacturer = () => {
           <Tabs defaultValue="all">
             <div className="flex items-center">
               <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="all">In Stock</TabsTrigger>
                 <TabsTrigger value="ordered">Ordered</TabsTrigger>
                 <TabsTrigger value="ready_for_shipment">
                   Ready For Shipment
@@ -285,9 +285,7 @@ const Manufacturer = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Create Products</CardTitle>
-                  <CardDescription>
-                    Create and distribute your products here.
-                  </CardDescription>
+                  <CardDescription>Create your products here.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -339,20 +337,14 @@ const Manufacturer = () => {
                     </TableBody>
                   </Table>
                 </CardContent>
-                <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>{products ? products.length : 0}</strong>{' '}
-                    Products
-                  </div>
-                </CardFooter>
               </Card>
             </TabsContent>
             <TabsContent value="ordered">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Orders</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    Distribute your products here.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -410,7 +402,6 @@ const Manufacturer = () => {
                                     >
                                       Request Distribution
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>Delete</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
@@ -428,9 +419,9 @@ const Manufacturer = () => {
             <TabsContent value="ready_for_shipment">
               <Card>
                 <CardHeader>
-                  <CardTitle>List Products</CardTitle>
+                  <CardTitle>Ready For Shipment</CardTitle>
                   <CardDescription>
-                    Order, receive, and list your products for sale here.
+                    Wait for your products to be shipped.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
